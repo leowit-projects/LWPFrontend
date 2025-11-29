@@ -58,7 +58,7 @@ const Login: React.FC = () => {
       
       // Only navigate on successful login
       setIsProcessing(false);
-      navigate('/dashboard');
+      navigate('/list-stocks');
     } catch (err: any) {
       console.error('Login error:', err);
       
