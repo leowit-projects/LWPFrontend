@@ -119,8 +119,8 @@ const Login: React.FC = () => {
           }}
         >
           <Typography
-            component="h1"
-            variant="h3"
+            component="h3"
+            variant="h4"
             gutterBottom
             sx={{ fontWeight: 700, color: '#667eea' }}
           >
@@ -133,7 +133,7 @@ const Login: React.FC = () => {
             gutterBottom
             sx={{ mb: 4 }}
           >
-            Manage Your Investment Portfolio
+            Welcome to Leowit Portfolio. Please sign in to continue.
           </Typography>
 
           {error && (
