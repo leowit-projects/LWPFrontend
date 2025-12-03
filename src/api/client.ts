@@ -320,6 +320,9 @@ export const holdingAccountsAPI = {
     reactivate: (accountId: string): Promise<AxiosResponse<HoldingAccount>> =>
         api.post<HoldingAccount>(`/api/holding-accounts/${accountId}/reactivate`),
 
+    deleteHolding: (accountId: string, holdingId: number): Promise<AxiosResponse<{ message: string; holding_id: number; account_id: string }>> =>
+        api.delete(`/api/holding-accounts/${accountId}/holdings/${holdingId}`),
+
     uploadHoldings: (accountId: string, file: File): Promise<AxiosResponse<HoldingUploadResponse>> => {
         const formData = new FormData();
         formData.append('file', file);

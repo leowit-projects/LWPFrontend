@@ -32,6 +32,7 @@ import {
   TrendingFlat,
   MonetizationOn,
   Assessment,
+  Delete,
 } from '@mui/icons-material';
 import { holdingAccountsAPI } from '../../api/client';
 import {
@@ -48,6 +49,7 @@ const ListHoldings: React.FC = () => {
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
   const [holdings, setHoldings] = useState<AccountHoldingsResponse | null>(null);
   
   // Filter state for asset types
@@ -75,6 +77,22 @@ const ListHoldings: React.FC = () => {
       setError(error.response?.data?.detail || 'Failed to load holdings');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteHolding = async (holdingId: number, assetName: string): Promise<void> => {
+    if (!window.confirm(`Are you sure you want to delete ${assetName}?`)) {
+      return;
+    }
+
+    try {
+      await holdingAccountsAPI.deleteHolding(accountId!, holdingId);
+      setSuccess(`${assetName} deleted successfully`);
+      // Reload holdings to reflect changes
+      await loadHoldings();
+    } catch (error: any) {
+      console.error('Failed to delete holding:', error);
+      setError(error.response?.data?.detail || 'Failed to delete holding');
     }
   };
 
@@ -231,6 +249,20 @@ const ListHoldings: React.FC = () => {
         </Box>
       </Box>
 
+      {/* Success Alert */}
+      {success && (
+        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>
+          {success}
+        </Alert>
+      )}
+
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+          {error}
+        </Alert>
+      )}
+
       {/* Asset Type Filter */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
@@ -361,7 +393,6 @@ const ListHoldings: React.FC = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>Symbol</TableCell>
-                  <TableCell>Name</TableCell>
                   <TableCell align="right">Quantity</TableCell>
                   <TableCell align="right">Avg Price</TableCell>
                   <TableCell align="right">Last Close</TableCell>
@@ -369,6 +400,8 @@ const ListHoldings: React.FC = () => {
                   <TableCell align="right">Current Value</TableCell>
                   <TableCell align="right">P&L</TableCell>
                   <TableCell align="right">P&L %</TableCell>
+                  <TableCell align="right">Updated</TableCell>
+                  <TableCell align="center">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -383,9 +416,6 @@ const ListHoldings: React.FC = () => {
                           {stock.exchange}
                         </Typography>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">{stock.name || '-'}</Typography>
                     </TableCell>
                     <TableCell align="right">{stock.quantity}</TableCell>
                     <TableCell align="right">
@@ -418,6 +448,21 @@ const ListHoldings: React.FC = () => {
                         size="small"
                       />
                     </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(stock.updated_at).toLocaleDateString()}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeleteHolding(stock.id, stock.symbol)}
+                        title="Delete holding"
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -439,7 +484,6 @@ const ListHoldings: React.FC = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>Symbol</TableCell>
-                  <TableCell>Name</TableCell>
                   <TableCell align="right">Quantity</TableCell>
                   <TableCell align="right">Avg Price</TableCell>
                   <TableCell align="right">Last Close</TableCell>
@@ -447,6 +491,8 @@ const ListHoldings: React.FC = () => {
                   <TableCell align="right">Current Value</TableCell>
                   <TableCell align="right">P&L</TableCell>
                   <TableCell align="right">P&L %</TableCell>
+                  <TableCell align="right">Updated</TableCell>
+                  <TableCell align="center">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -461,9 +507,6 @@ const ListHoldings: React.FC = () => {
                           {etf.exchange}
                         </Typography>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">{etf.name || '-'}</Typography>
                     </TableCell>
                     <TableCell align="right">{etf.quantity}</TableCell>
                     <TableCell align="right">
@@ -494,6 +537,21 @@ const ListHoldings: React.FC = () => {
                         size="small"
                       />
                     </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(etf.updated_at).toLocaleDateString()}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeleteHolding(etf.id, etf.symbol)}
+                        title="Delete holding"
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -521,6 +579,8 @@ const ListHoldings: React.FC = () => {
                   <TableCell align="right">Avg Price</TableCell>
                   <TableCell align="right">Invested</TableCell>
                   <TableCell align="right">Current Value</TableCell>
+                  <TableCell align="right">Updated</TableCell>
+                  <TableCell align="center">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -548,6 +608,21 @@ const ListHoldings: React.FC = () => {
                     </TableCell>
                     <TableCell align="right">
                       {formatCurrency(mf.current_value, mf.currency)}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(mf.updated_at).toLocaleDateString()}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeleteHolding(mf.id, mf.name)}
+                        title="Delete holding"
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -578,6 +653,8 @@ const ListHoldings: React.FC = () => {
                   <TableCell align="right">Maturity</TableCell>
                   <TableCell align="right">Invested</TableCell>
                   <TableCell align="right">Current Value</TableCell>
+                  <TableCell align="right">Updated</TableCell>
+                  <TableCell align="center">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -613,6 +690,21 @@ const ListHoldings: React.FC = () => {
                     </TableCell>
                     <TableCell align="right">
                       {formatCurrency(bond.current_value, bond.currency)}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(bond.updated_at).toLocaleDateString()}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeleteHolding(bond.id, bond.name)}
+                        title="Delete holding"
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
                     </TableCell>
                   </TableRow>
                 ))}
