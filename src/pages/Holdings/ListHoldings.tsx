@@ -38,8 +38,6 @@ import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { holdingAccountsAPI } from '../../api/client';
 import {
   HoldingAccountsResponse,
-  StockHoldingDetail,
-  ETFHoldingDetail,
   BondHoldingDetail,
   MutualFundHoldingDetail,
 } from '../../types';

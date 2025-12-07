@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -29,12 +28,10 @@ import {
 import { holdingAccountsAPI } from '../../api/client';
 import {
   HoldingAccount,
-  HoldingRecommendation,
   HoldingRecommendationsResponse,
 } from '../../types';
 
 const HoldingRecommendations: React.FC = () => {
-  const navigate = useNavigate();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -371,7 +368,7 @@ const HoldingRecommendations: React.FC = () => {
         <>
           {/* Summary Cards */}
           <Grid container spacing={3} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{xs:12, sm:6, md:3}}>
               <Card>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -390,7 +387,7 @@ const HoldingRecommendations: React.FC = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{xs:12, sm:6, md:3}}>
               <Card>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -406,7 +403,7 @@ const HoldingRecommendations: React.FC = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{xs:12, sm:6, md:3}}>
               <Card>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -422,7 +419,7 @@ const HoldingRecommendations: React.FC = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{xs:12, sm:6, md:3}}>
               <Card>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
