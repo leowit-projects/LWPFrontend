@@ -70,6 +70,7 @@ const ListHoldings: React.FC = () => {
     setError('');
     try {
       const response = await holdingAccountsAPI.getHoldings(accountId!);
+      console.log('Holdings loaded:', response.data);
       setHoldings(response.data);
     } catch (error: any) {
       console.error('Failed to load holdings:', error);

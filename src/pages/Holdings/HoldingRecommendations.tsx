@@ -187,25 +187,6 @@ const HoldingRecommendations: React.FC = () => {
       ),
     },
     {
-      field: 'current_quantity',
-      headerName: 'Current Qty',
-      width: 120,
-      align: 'right',
-      headerAlign: 'right',
-    },
-    {
-      field: 'recommended_quantity',
-      headerName: 'Recommended Qty',
-      width: 150,
-      align: 'right',
-      headerAlign: 'right',
-      renderCell: (params: GridRenderCellParams) => (
-        <Typography variant="body2" fontWeight={600}>
-          {params.row.recommended_quantity}
-        </Typography>
-      ),
-    },
-    {
       field: 'current_average_price',
       headerName: 'Current Avg Price',
       width: 150,
@@ -215,6 +196,13 @@ const HoldingRecommendations: React.FC = () => {
         const account = getSelectedAccount();
         return formatCurrency(params.row.current_average_price, account?.currency || 'INR');
       },
+    },
+    {
+      field: 'current_quantity',
+      headerName: 'Current Qty',
+      width: 120,
+      align: 'right',
+      headerAlign: 'right',
     },
     {
       field: 'target_price',
@@ -230,6 +218,18 @@ const HoldingRecommendations: React.FC = () => {
           </Typography>
         );
       },
+    },
+    {
+      field: 'recommended_quantity',
+      headerName: 'Recommended Qty',
+      width: 150,
+      align: 'right',
+      headerAlign: 'right',
+      renderCell: (params: GridRenderCellParams) => (
+        <Typography variant="body2" fontWeight={600}>
+          {params.row.recommended_quantity}
+        </Typography>
+      ),
     },
     {
       field: 'price_52w_low',
