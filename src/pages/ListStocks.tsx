@@ -541,6 +541,18 @@ const ListStocks: React.FC = () => {
         );
       },
     },
+    {
+      field: 'sector_industry',
+      headerName: 'Industry',
+      width: 200,
+      align: 'left',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams) => (
+        <Typography variant="body2" color="text.secondary">
+          {params.value || '-'}
+        </Typography>
+      ),  
+    },
   ];
 
   return (
