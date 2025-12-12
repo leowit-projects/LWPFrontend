@@ -635,17 +635,17 @@ const ListStocks: React.FC = () => {
 
       {/* Data Grid */}
       <Paper sx={{ width: '100%', p: 2 }}>
-        <Box sx={{ height: '80vh', width: '100%' }}>
+        <Box sx={{ height: '90vh', width: '100%' }}>
           <DataGrid
             rows={filteredStocks}
             columns={columns}
             loading={loading}
             getRowId={(row) => row.symbol}
             disableRowSelectionOnClick
-            pageSizeOptions={[10, 25, 50, 100]}
+            pageSizeOptions={[50, 100, 150]}
             initialState={{
               pagination: {
-                paginationModel: { pageSize: 25, page: 0 },
+                paginationModel: { pageSize: 50, page: 0 },
               },
               sorting: {
                 sortModel: [{ field: '52w_range', sort: 'asc' }],
