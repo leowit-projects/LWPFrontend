@@ -89,6 +89,7 @@ export interface StockSymbol {
     rsi_index?: number;
     price_ma_20d?: number;
     price_ma_200d?: number;
+    recommendation?: string;  // BUY, SELL, or HOLD
     created_at: string;
 }
 
@@ -507,4 +508,52 @@ export interface HoldingRecommendationsResponse {
     recommendations_count: number;
     active_count: number;
     recommendations: HoldingRecommendation[];
+}
+
+// Historical Charts types
+export enum TimeRange {
+    YTD = 'YTD',
+    ONE_YEAR = '1Y',
+    THREE_YEARS = '3Y',
+    FIVE_YEARS = '5Y',
+}
+
+export enum AssetTypeParam {
+    STOCK = 'STOCK',
+    ETF = 'ETF',
+}
+
+export interface PriceHistoryDataPoint {
+    date: string;
+    close_price: number | null;
+    ma_20?: number | null;
+    ma_200?: number | null;
+}
+
+export interface PriceHistoryData {
+    symbol: string;
+    asset_type: string;
+    time_range: string;
+    start_date: string;
+    end_date: string;
+    data_points: number;
+    history: PriceHistoryDataPoint[];
+}
+
+export interface ChartSummary {
+    symbol: string;
+    asset_type: string;
+    currency?: string;
+    current_price: number | null;
+    price_52w_low: number | null;
+    price_52w_high: number | null;
+    ma_20: number | null;
+    ma_200: number | null;
+    last_updated: string | null;
+    // Stock-specific
+    pe_ratio?: number | null;
+    dividend_yield?: number | null;
+    // ETF-specific
+    expense_ratio?: number | null;
+    tracking_error?: number | null;
 }

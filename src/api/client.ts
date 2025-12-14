@@ -35,6 +35,10 @@ import {
     HoldingUploadResponse,
     HoldingAccountsResponse,
     HoldingRecommendationsResponse,
+    TimeRange,
+    AssetTypeParam,
+    PriceHistoryData,
+    ChartSummary,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -343,6 +347,35 @@ export const holdingAccountsAPI = {
             }
         );
     },
+};
+
+// Historical Charts API
+export const historicalChartsAPI = {
+    getSimpleHistory: (
+        symbol: string,
+        assetType: AssetTypeParam,
+        timeRange: TimeRange = TimeRange.ONE_YEAR
+    ): Promise<AxiosResponse<PriceHistoryData>> =>
+        api.get<PriceHistoryData>(`/api/historical-charts/${symbol}/simple-history`, {
+            params: { asset_type: assetType, time_range: timeRange }
+        }),
+
+    getHistoryWithMA: (
+        symbol: string,
+        assetType: AssetTypeParam,
+        timeRange: TimeRange = TimeRange.ONE_YEAR
+    ): Promise<AxiosResponse<PriceHistoryData>> =>
+        api.get<PriceHistoryData>(`/api/historical-charts/${symbol}/history-with-ma`, {
+            params: { asset_type: assetType, time_range: timeRange }
+        }),
+
+    getChartSummary: (
+        symbol: string,
+        assetType: AssetTypeParam
+    ): Promise<AxiosResponse<ChartSummary>> =>
+        api.get<ChartSummary>(`/api/historical-charts/${symbol}/summary`, {
+            params: { asset_type: assetType }
+        }),
 };
 
 export default api;

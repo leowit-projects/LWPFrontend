@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -13,6 +14,7 @@ import {
   LinearProgress,
   Checkbox,
   ListItemText,
+  Link,
 } from '@mui/material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { stockAPI } from '../api/client';
@@ -155,8 +157,8 @@ const ListStocks: React.FC = () => {
     try {
       const response = await stockAPI.getAll('list');
       setStocks(response.data);
-      console.log('Stocks loaded:', response.data);
       setFilteredStocks(response.data);
+      console.log('Filtered Stocks set:', response.data);
       setLastRefreshed(new Date());
     } catch (error) {
       console.error('Failed to load stocks:', error);
@@ -180,16 +182,55 @@ const ListStocks: React.FC = () => {
     {
       field: 'symbol',
       headerName: 'Symbol',
-      width: 120,
+      width: 150,
       align: 'left',
       headerAlign: 'center',
-      renderCell: (params: GridRenderCellParams) => (
-        <Tooltip title={params.row.name || 'No name available'} arrow>
-          <Typography variant="body2" fontWeight={600} sx={{ cursor: 'pointer' }}>
-            {params.value}
-          </Typography>
-        </Tooltip>
-      ),
+      renderCell: (params: GridRenderCellParams) => {
+        const recommendation = params.row.recommendation;
+        const showChip = recommendation === 'BUY' || recommendation === 'SELL';
+        
+        return (
+          <Box display="flex" alignItems="center" gap={0.5}>
+            <Tooltip title={params.row.name || 'No name available'} arrow>
+              <Link
+                component={RouterLink}
+                to={`/list-stocks/${params.value}/history`}
+                target="_blank"
+                rel="noopener noreferrer"
+                underline="hover"
+                sx={{
+                  fontWeight: 600,
+                  color: 'primary.main',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    color: 'primary.dark',
+                  },
+                  mt: -1,
+                }}
+              >
+                {params.value}
+              </Link>
+            </Tooltip>
+            {showChip && (
+              <Chip
+                label={recommendation === 'BUY' ? 'B' : 'S'}
+                size="small"
+                sx={{
+                  height: 20,
+                  minWidth: 20,
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  backgroundColor: recommendation === 'BUY' ? 'success.main' : 'error.main',
+                  color: 'white',
+                  '& .MuiChip-label': {
+                    padding: '0 4px',
+                  },
+                }}
+              />
+            )}
+          </Box>
+        );
+      },
     },
     {
       field: 'price_last_close',
