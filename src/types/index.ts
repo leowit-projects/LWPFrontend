@@ -533,6 +533,7 @@ export interface PriceHistoryDataPoint {
 export interface PriceHistoryData {
     symbol: string;
     asset_type: string;
+    currency?: string;
     time_range: string;
     start_date: string;
     end_date: string;

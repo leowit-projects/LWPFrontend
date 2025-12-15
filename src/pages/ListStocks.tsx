@@ -15,6 +15,7 @@ import {
   Checkbox,
   ListItemText,
   Link,
+  Button,
 } from '@mui/material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { stockAPI } from '../api/client';
@@ -122,6 +123,7 @@ const ListStocks: React.FC = () => {
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [industries, setIndustries] = useState<string[]>([]);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [selectedStocks, setSelectedStocks] = useState<string[]>([]); // New state for selected stock symbols
 
   useEffect(() => {
     loadStocks();
@@ -177,8 +179,65 @@ const ListStocks: React.FC = () => {
     }
   };
 
+  const handleGetSymbols = () => {
+    // Get the selected stocks with their last close prices
+    const selectedStockData = stocks
+      .filter(stock => selectedStocks.includes(stock.symbol))
+      .map(stock => ({
+        symbol: stock.symbol,
+        price: stock.price_last_close ? Math.round(stock.price_last_close) : 0
+      }))
+      .sort((a, b) => a.symbol.localeCompare(b.symbol));
+
+    // Format the output
+    const formattedOutput = selectedStockData
+      .map(stock => `${stock.symbol} - ${stock.price}`)
+      .join('\n');
+
+    // Copy to clipboard and show alert
+    navigator.clipboard.writeText(formattedOutput).then(() => {
+      alert(`Selected Symbols (${selectedStockData.length}):\n\n${formattedOutput}\n\nCopied to clipboard!`);
+    }).catch(err => {
+      console.error('Failed to copy to clipboard:', err);
+      alert(`Selected Symbols (${selectedStockData.length}):\n\n${formattedOutput}`);
+    });
+  };
+
   // Define DataGrid columns
   const columns: GridColDef[] = [
+    {
+      field: 'checkbox',
+      headerName: '',
+      width: 60,
+      sortable: false,
+      filterable: false,
+      disableColumnMenu: true,
+      renderHeader: () => (
+        <Checkbox
+          checked={selectedStocks.length === filteredStocks.length && filteredStocks.length > 0}
+          indeterminate={selectedStocks.length > 0 && selectedStocks.length < filteredStocks.length}
+          onChange={(e) => {
+            if (e.target.checked) {
+              setSelectedStocks(filteredStocks.map(stock => stock.symbol));
+            } else {
+              setSelectedStocks([]);
+            }
+          }}
+        />
+      ),
+      renderCell: (params: GridRenderCellParams) => (
+        <Checkbox
+          checked={selectedStocks.includes(params.row.symbol)}
+          onChange={(e) => {
+            if (e.target.checked) {
+              setSelectedStocks([...selectedStocks, params.row.symbol]);
+            } else {
+              setSelectedStocks(selectedStocks.filter(s => s !== params.row.symbol));
+            }
+          }}
+        />
+      ),
+    },
     {
       field: 'symbol',
       headerName: 'Symbol',
@@ -618,6 +677,16 @@ const ListStocks: React.FC = () => {
           Stocks
         </Typography>
         <Box display="flex" alignItems="center" gap={2}>
+          {selectedStocks.length > 0 && (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleGetSymbols}
+              sx={{ fontWeight: 600 }}
+            >
+              Get Symbols ({selectedStocks.length})
+            </Button>
+          )}
           {lastRefreshed && (
             <Typography variant="caption" color="text.secondary">
               Last refreshed: {lastRefreshed.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}

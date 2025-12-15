@@ -57,6 +57,7 @@ const StockHistory: React.FC = () => {
       setSimpleHistory(simpleResponse.data);
       setMAHistory(maResponse.data);
       setSummary(summaryResponse.data);
+      console.log(summary);
     } catch (err: any) {
       console.error('Error loading stock history:', err);
       setError(err.response?.data?.detail || 'Failed to load stock history');
@@ -278,6 +279,7 @@ const StockHistory: React.FC = () => {
                 },
               ]}
               height={500}
+              grid={{ vertical: true, horizontal: true,  }}
               margin={{ left: 80, right: 20, top: 20, bottom: 60 }}
               sx={{
                 '& .MuiLineElement-root': {
@@ -318,6 +320,7 @@ const StockHistory: React.FC = () => {
                 },
               ]}
               height={500}
+              grid={{ vertical: true, horizontal: true,  }}
               margin={{ left: 80, right: 20, top: 20, bottom: 60 }}
               sx={{
                 '& .MuiLineElement-root': {
