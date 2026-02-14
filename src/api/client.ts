@@ -34,7 +34,6 @@ import {
     HoldingAccountUpdate,
     HoldingUploadResponse,
     HoldingAccountsResponse,
-    HoldingRecommendationsResponse,
     TimeRange,
     AssetTypeParam,
     PriceHistoryData,
@@ -327,11 +326,6 @@ export const holdingAccountsAPI = {
 
     deleteHolding: (accountId: string, holdingId: number): Promise<AxiosResponse<{ message: string; holding_id: number; account_id: string }>> =>
         api.delete(`/api/holding-accounts/${accountId}/holdings/${holdingId}`),
-
-    getHoldingRecommendations: (accountId: string, includeInactive?: boolean): Promise<AxiosResponse<HoldingRecommendationsResponse>> =>
-        api.get<HoldingRecommendationsResponse>(`/api/holding-accounts/${accountId}/holding-recommendations`, {
-            params: { include_inactive: includeInactive }
-        }),
 
     uploadHoldings: (accountId: string, file: File): Promise<AxiosResponse<HoldingUploadResponse>> => {
         const formData = new FormData();

@@ -25,7 +25,6 @@ import {
   AccountBalance,
   Settings,
   Logout,
-  Lightbulb,
   ExpandLess,
   ExpandMore,
   Email,
@@ -51,7 +50,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [adminOpen, setAdminOpen] = useState(false);
-  const [holdingsOpen, setHoldingsOpen] = useState(false);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -73,36 +71,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const handleAdminToggle = () => {
     setAdminOpen(!adminOpen);
-    setHoldingsOpen(false);
-  };
-
-  const handleHoldingsToggle = () => {
-    setHoldingsOpen(!holdingsOpen);
-    setAdminOpen(false);
   };
 
   // Build menu items based on user role
   const menuItems = [];
 
-  // All users can see Recommendations and Watchlists
   menuItems.push({ text: 'Stocks', icon: <TrendingUp />, path: '/list-stocks' });
   menuItems.push({ text: 'ETFs', icon: <PieChart />, path: '/list-etfs' });
 
-  // Viewer and Admin can see Dashboard
   if (isViewer || isAdmin) {
     menuItems.push({ text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' });
   }
-
-  // Holdings submenu items (for Viewer and Admin)
-  const holdingsMenuItems = [
-    { text: 'Holding Accounts', icon: <AccountBalance />, path: '/holding-accounts' },
-    { text: 'Holding Recommendations', icon: <Lightbulb />, path: '/holding-recommendations' },
-    // { text: 'List Holdings', icon: <AccountBalance />, path: '/holding/list-holdings' },
-    // { text: 'Stocks', icon: <ShowChart />, path: '/holding/stocks' },
-    // { text: 'ETFs', icon: <PieChart />, path: '/holding/etfs' },
-    // { text: 'Bonds', icon: <AccountBalance />, path: '/holding/bonds' },
-    // { text: 'Mutual Funds', icon: <Loyalty />, path: '/holding/mutual-funds' },
-  ];
 
   // Admin submenu items
   const adminMenuItems = [
@@ -116,6 +95,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { text: 'Scheduler', icon: <Settings />, path: '/admin/scheduler' },
     { text: 'Audit Logs', icon: <Assessment />, path: '/admin/audit-logs' },
   ];
+
+  // Holdings sub-pages for active path detection
+  const holdingsPaths = ['/holding-accounts', '/list-holdings', '/upload-holdings'];
+  const isHoldingsActive = holdingsPaths.some((p) => location.pathname.startsWith(p));
 
   const drawer = (
     <div>
@@ -138,53 +121,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </ListItem>
         ))}
 
-        {/* Holdings Menu */}
+        {/* Holdings — direct link, no submenu */}
         {(isViewer || isAdmin) && (
-          <>
-            <ListItem disablePadding>
-              <ListItemButton onClick={handleHoldingsToggle}>
-                <ListItemIcon>
-                  <Work />
-                </ListItemIcon>
-                <ListItemText primary="Holdings" />
-                {holdingsOpen ? <ExpandLess /> : <ExpandMore />}
-              </ListItemButton>
-            </ListItem>
-            <Collapse in={holdingsOpen} timeout="auto" unmountOnExit>
-              <List component="div" disablePadding>
-                {holdingsMenuItems.map((item) => (
-                  <ListItem key={item.text} disablePadding>
-                    <ListItemButton
-                      sx={{ 
-                        pl: 4,
-                        backgroundColor: 'action.hover',
-                        '&:hover': {
-                          backgroundColor: 'action.selected',
-                        },
-                        '&.Mui-selected': {
-                          backgroundColor: 'primary.light',
-                          '&:hover': {
-                            backgroundColor: 'primary.light',
-                          },
-                        },
-                      }}
-                      selected={location.pathname === item.path}
-                      onClick={() => navigate(item.path)}
-                    >
-                      <ListItemIcon sx={{ color: 'primary.main' }}>{item.icon}</ListItemIcon>
-                      <ListItemText 
-                        primary={item.text}
-                        primaryTypographyProps={{
-                          fontSize: '0.9rem',
-                          color: 'text.secondary'
-                        }}
-                      />
-                    </ListItemButton>
-                  </ListItem>
-                ))}
-              </List>
-            </Collapse>
-          </>
+          <ListItem disablePadding>
+            <ListItemButton
+              selected={isHoldingsActive}
+              onClick={() => navigate('/holding-accounts')}
+            >
+              <ListItemIcon>
+                <Work />
+              </ListItemIcon>
+              <ListItemText primary="Holdings" />
+            </ListItemButton>
+          </ListItem>
         )}
 
         {/* Admin Menu */}
@@ -204,29 +153,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 {adminMenuItems.map((item) => (
                   <ListItem key={item.text} disablePadding>
                     <ListItemButton
-                      sx={{ 
+                      sx={{
                         pl: 4,
                         backgroundColor: 'action.hover',
-                        '&:hover': {
-                          backgroundColor: 'action.selected',
-                        },
+                        '&:hover': { backgroundColor: 'action.selected' },
                         '&.Mui-selected': {
                           backgroundColor: 'primary.light',
-                          '&:hover': {
-                            backgroundColor: 'primary.light',
-                          },
+                          '&:hover': { backgroundColor: 'primary.light' },
                         },
                       }}
                       selected={location.pathname === item.path}
                       onClick={() => navigate(item.path)}
                     >
                       <ListItemIcon sx={{ color: 'primary.main' }}>{item.icon}</ListItemIcon>
-                      <ListItemText 
+                      <ListItemText
                         primary={item.text}
-                        primaryTypographyProps={{
-                          fontSize: '0.9rem',
-                          color: 'text.secondary'
-                        }}
+                        primaryTypographyProps={{ fontSize: '0.9rem', color: 'text.secondary' }}
                       />
                     </ListItemButton>
                   </ListItem>
@@ -283,9 +225,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true,
-          }}
+          ModalProps={{ keepMounted: true }}
           sx={{
             display: { xs: 'block', sm: 'none' },
             '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },

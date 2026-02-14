@@ -461,54 +461,7 @@ export interface AccountHoldingsSummary {
     mutual_funds_count: number;
 }
 
-export interface HoldingAccountsResponse {
-    account_id: string;
-    account_platform: string;
-    currency: string;
-    summary: AccountHoldingsSummary;
-    holdings: {
-        stocks: StockHoldingDetail[];
-        etfs: ETFHoldingDetail[];
-        bonds: BondHoldingDetail[];
-        mutual_funds: MutualFundHoldingDetail[];
-    };
-}
-
 // Holding Recommendation types
-export interface HoldingRecommendation {
-    id: number;
-    holding_account_id: string;
-    stock_symbol: string;
-    recommendation_type: string; // 'BUY', 'SELL', 'HOLD'
-
-    // Price information
-    current_average_price: number;
-    price_52w_low: number;
-    target_price: number;
-
-    // Quantity information
-    current_quantity: number;
-    recommended_quantity: number;
-
-    // Technical indicators
-    pe_ratio?: number;
-    pegy_index?: number;
-    rsi_index?: number;
-
-    // Metadata
-    recommendation_date: string;
-    is_active: boolean;
-    notes?: string;
-    created_at: string;
-    updated_at: string;
-}
-
-export interface HoldingRecommendationsResponse {
-    account_id: string;
-    recommendations_count: number;
-    active_count: number;
-    recommendations: HoldingRecommendation[];
-}
 
 // Historical Charts types
 export enum TimeRange {
@@ -557,4 +510,59 @@ export interface ChartSummary {
     // ETF-specific
     expense_ratio?: number | null;
     tracking_error?: number | null;
+}
+
+// ── Add these to your existing types.ts ──────────────────────────────────────
+//
+// 1. HoldingRecommendation (was only used inside HoldingRecommendationsResponse)
+// 2. RecommendationsSummary  (new — embedded in the combined endpoint response)
+// 3. HoldingAccountsResponse extended with recommendations fields
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface HoldingRecommendation {
+    id: number;
+    account_id: string;
+    stock_symbol: string;
+    recommendation_type: 'BUY' | 'SELL' | 'HOLD';
+    current_average_price: number;
+    current_quantity: number;
+    target_price: number;
+    recommended_quantity: number;
+    price_52w_low: number;
+    pe_ratio?: number | null;
+    pegy_index?: number | null;
+    rsi_index?: number | null;
+    recommendation_date: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface RecommendationsSummary {
+    total_count: number;
+    active_count: number;
+    buy_count: number;
+    sell_count: number;
+    hold_count: number;
+}
+
+// Extend (or replace) your existing HoldingAccountsResponse:
+export interface HoldingAccountsResponse {
+    account_id: string;
+    account_platform: string;
+    currency: string;
+    holdings: {
+        stocks: StockHoldingDetail[];
+        etfs: ETFHoldingDetail[];
+        mutual_funds: MutualFundHoldingDetail[];
+        bonds: BondHoldingDetail[];
+    };
+    summary: {
+        total_holdings: number;
+        total_invested: number;
+        total_current_value: number;
+    };
+    // ── New fields returned by the combined endpoint ──────────────────────────
+    recommendations: HoldingRecommendation[];           // active recommendations
+    recommendations_summary: RecommendationsSummary;
 }

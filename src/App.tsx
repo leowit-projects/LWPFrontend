@@ -23,7 +23,6 @@ import Scheduler from './pages/Admin/Schedular';
 import ListEtfs from './pages/ListEtfs';
 import UploadHoldings from './pages/Holdings/UploadHoldings';
 import ListHoldings from './pages/Holdings/ListHoldings';
-import HoldingRecommendations from './pages/Holdings/HoldingRecommendations';
 import StockHistory from './pages/StockHistory';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
@@ -173,16 +172,6 @@ const App: React.FC = () => {
                   <ViewerRoute>
                     <Layout>
                       <ListHoldings />
-                    </Layout>
-                  </ViewerRoute>
-                }
-              />
-              <Route
-                path="/holding-recommendations"
-                element={
-                  <ViewerRoute>
-                    <Layout>
-                      <HoldingRecommendations />
                     </Layout>
                   </ViewerRoute>
                 }
