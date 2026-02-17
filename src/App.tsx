@@ -42,6 +42,11 @@ const theme = createTheme({
     secondary: {
       main: '#764ba2',
     },
+    text: {
+      primary: '#000', // Your default primary text color
+      secondary: '#aaaaaa', // Your default secondary text color
+      disabled: '#666666', // Your default disabled text color
+    },
   },
   components: {
     MuiListItemIcon: {

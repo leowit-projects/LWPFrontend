@@ -147,7 +147,7 @@ const getDaysAgoColor = (dateString: string): string => {
   const diff = Math.floor(
     Math.abs(new Date().getTime() - new Date(dateString).getTime()) / 86_400_000
   );
-  return diff > 2 ? 'error.main' : 'text.secondary';
+  return diff > 2 ? 'error.main' : '#00a556';
 };
 
 // ─── TabPanel ─────────────────────────────────────────────────────────────────
@@ -317,13 +317,13 @@ function SectorPieChart({
       <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
         <PieChartIcon fontSize="small" sx={{ color: '#667eea' }} /> Invested by Sector
       </Typography>
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={400}>
         <PieChart>
           <Pie
             data={data}
             cx="50%"
             cy="50%"
-            outerRadius={100}
+            outerRadius={150}
             dataKey="value"
             labelLine={false}
             label={renderLabel}
@@ -633,7 +633,7 @@ function StockRecommendationsTable({
       renderCell: (p: GridRenderCellParams) => {
         const priority = isUnderInvested(p.row.stock_symbol);
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: '100%' }}>
             <Typography variant="body2" fontWeight={700}>{p.value as string}</Typography>
             {priority && (
               <Chip
@@ -680,7 +680,9 @@ function StockRecommendationsTable({
       width: 88,
       type: 'number',
       renderCell: (p: GridRenderCellParams) => (
-        <Typography variant="body2" fontWeight={700} color="primary">{p.value as number}</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, height: '100%' }}>
+          <Typography variant="body2" fontWeight={700} color="primary">{p.value as number}</Typography>
+        </Box>
       ),
     },
     {
@@ -696,9 +698,11 @@ function StockRecommendationsTable({
       width: 125,
       type: 'number',
       renderCell: (p: GridRenderCellParams) => (
-        <Typography variant="body2" fontWeight={700} color="success.main">
-          {formatCurrency(p.value as number, currency)}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, height: '100%' }}>
+          <Typography variant="body2" fontWeight={700} color="success.main">
+            {formatCurrency(p.value as number, currency)}
+          </Typography>
+        </Box>
       ),
     },
     {
@@ -722,9 +726,15 @@ function StockRecommendationsTable({
       type: 'number',
       renderCell: (p: GridRenderCellParams) => {
         const rsi = p.value as number | null;
-        if (rsi == null) return <Typography variant="body2" color="text.disabled">—</Typography>;
+        if (rsi == null) return (
+          <Typography variant="body2" color="text.disabled">—</Typography>
+        );
         const color = rsi < 30 ? 'success.main' : rsi > 70 ? 'error.main' : 'text.primary';
-        return <Typography variant="body2" fontWeight={600} color={color}>{rsi.toFixed(1)}</Typography>;
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, height: '100%' }}>
+            <Typography variant="body2" fontWeight={600} color={color}>{rsi.toFixed(1)}</Typography>
+          </Box>
+        );
       },
     },
     {
