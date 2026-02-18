@@ -17,6 +17,7 @@ import {
   Menu,
   MenuItem,
   Collapse,
+  Tooltip,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -34,10 +35,13 @@ import {
   Assessment,
   AccountTree,
   Work,
+  ChevronLeft,
+  ChevronRight,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 
 const drawerWidth = 210;
+const collapsedDrawerWidth = 60;
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -48,11 +52,20 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const { user, logout, isAdmin, isViewer } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [adminOpen, setAdminOpen] = useState(false);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
+  };
+
+  const handleDrawerCollapse = () => {
+    setDrawerOpen(!drawerOpen);
+    // Close admin submenu when collapsing
+    if (drawerOpen) {
+      setAdminOpen(false);
+    }
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -100,39 +113,56 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const holdingsPaths = ['/holding-accounts', '/list-holdings', '/upload-holdings'];
   const isHoldingsActive = holdingsPaths.some((p) => location.pathname.startsWith(p));
 
+  const currentDrawerWidth = drawerOpen ? drawerWidth : collapsedDrawerWidth;
+
   const drawer = (
     <div>
-      <Toolbar>
-        <Typography variant="h6" noWrap component="div" sx={{ color: '#667eea', fontWeight: 700 }}>
-          Leowit Portfolio
-        </Typography>
+      <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {drawerOpen && (
+          <Typography variant="subtitle1" noWrap component="div" sx={{ color: '#667eea', fontWeight: 700  }}>
+            Leowit Portfolio
+          </Typography>
+        )}
+        <IconButton onClick={handleDrawerCollapse} 
+              size='small'
+              sx={{ ml: drawerOpen ? 0 : 'auto', mr: drawerOpen ? 0 : 'auto' }}>
+          {drawerOpen ? <ChevronLeft /> : <ChevronRight />}
+        </IconButton>
       </Toolbar>
       <Divider />
       <List>
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
-            <ListItemButton
-              selected={location.pathname === item.path}
-              onClick={() => navigate(item.path)}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
+            <Tooltip title={!drawerOpen ? item.text : ''} placement="right">
+              <ListItemButton
+                selected={location.pathname === item.path}
+                onClick={() => navigate(item.path)}
+                sx={{ justifyContent: drawerOpen ? 'initial' : 'center' }}
+              >
+                <ListItemIcon sx={{ minWidth: drawerOpen ? 56 : 0, justifyContent: 'center' }}>
+                  {item.icon}
+                </ListItemIcon>
+                {drawerOpen && <ListItemText primary={item.text} />}
+              </ListItemButton>
+            </Tooltip>
           </ListItem>
         ))}
 
-        {/* Holdings — direct link, no submenu */}
+        {/* Holdings – direct link, no submenu */}
         {(isViewer || isAdmin) && (
           <ListItem disablePadding>
-            <ListItemButton
-              selected={isHoldingsActive}
-              onClick={() => navigate('/holding-accounts')}
-            >
-              <ListItemIcon>
-                <Work />
-              </ListItemIcon>
-              <ListItemText primary="Holdings" />
-            </ListItemButton>
+            <Tooltip title={!drawerOpen ? 'Holdings' : ''} placement="right">
+              <ListItemButton
+                selected={isHoldingsActive}
+                onClick={() => navigate('/holding-accounts')}
+                sx={{ justifyContent: drawerOpen ? 'initial' : 'center' }}
+              >
+                <ListItemIcon sx={{ minWidth: drawerOpen ? 56 : 0, justifyContent: 'center' }}>
+                  <Work />
+                </ListItemIcon>
+                {drawerOpen && <ListItemText primary="Holdings" />}
+              </ListItemButton>
+            </Tooltip>
           </ListItem>
         )}
 
@@ -140,41 +170,52 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {isAdmin && (
           <>
             <ListItem disablePadding>
-              <ListItemButton onClick={handleAdminToggle}>
-                <ListItemIcon>
-                  <Settings />
-                </ListItemIcon>
-                <ListItemText primary="Admin" />
-                {adminOpen ? <ExpandLess /> : <ExpandMore />}
-              </ListItemButton>
+              <Tooltip title={!drawerOpen ? 'Admin' : ''} placement="right">
+                <ListItemButton 
+                  onClick={drawerOpen ? handleAdminToggle : undefined}
+                  sx={{ justifyContent: drawerOpen ? 'initial' : 'center' }}
+                >
+                  <ListItemIcon sx={{ minWidth: drawerOpen ? 56 : 0, justifyContent: 'center' }}>
+                    <Settings />
+                  </ListItemIcon>
+                  {drawerOpen && (
+                    <>
+                      <ListItemText primary="Admin" />
+                      {adminOpen ? <ExpandLess /> : <ExpandMore />}
+                    </>
+                  )}
+                </ListItemButton>
+              </Tooltip>
             </ListItem>
-            <Collapse in={adminOpen} timeout="auto" unmountOnExit>
-              <List component="div" disablePadding>
-                {adminMenuItems.map((item) => (
-                  <ListItem key={item.text} disablePadding>
-                    <ListItemButton
-                      sx={{
-                        pl: 4,
-                        backgroundColor: 'action.hover',
-                        '&:hover': { backgroundColor: 'action.selected' },
-                        '&.Mui-selected': {
-                          backgroundColor: 'primary.light',
-                          '&:hover': { backgroundColor: 'primary.light' },
-                        },
-                      }}
-                      selected={location.pathname === item.path}
-                      onClick={() => navigate(item.path)}
-                    >
-                      <ListItemIcon sx={{ color: 'primary.main' }}>{item.icon}</ListItemIcon>
-                      <ListItemText
-                        primary={item.text}
-                        primaryTypographyProps={{ fontSize: '0.9rem', color: 'text.secondary' }}
-                      />
-                    </ListItemButton>
-                  </ListItem>
-                ))}
-              </List>
-            </Collapse>
+            {drawerOpen && (
+              <Collapse in={adminOpen} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
+                  {adminMenuItems.map((item) => (
+                    <ListItem key={item.text} disablePadding>
+                      <ListItemButton
+                        sx={{
+                          pl: 4,
+                          backgroundColor: 'action.hover',
+                          '&:hover': { backgroundColor: 'action.selected' },
+                          '&.Mui-selected': {
+                            backgroundColor: 'primary.light',
+                            '&:hover': { backgroundColor: 'primary.light' },
+                          },
+                        }}
+                        selected={location.pathname === item.path}
+                        onClick={() => navigate(item.path)}
+                      >
+                        <ListItemIcon sx={{ color: 'primary.main' }}>{item.icon}</ListItemIcon>
+                        <ListItemText
+                          primary={item.text}
+                          primaryTypographyProps={{ fontSize: '0.9rem', color: 'text.secondary' }}
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+                </List>
+              </Collapse>
+            )}
           </>
         )}
       </List>
@@ -186,8 +227,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <AppBar
         position="fixed"
         sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
+          width: { sm: `calc(100% - ${currentDrawerWidth}px)` },
+          ml: { sm: `${currentDrawerWidth}px` },
+          transition: 'width 0.2s, margin 0.2s',
         }}
       >
         <Toolbar>
@@ -220,7 +262,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </Menu>
         </Toolbar>
       </AppBar>
-      <Box component="nav" sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}>
+      <Box component="nav" sx={{ width: { sm: currentDrawerWidth }, flexShrink: { sm: 0 } }}>
         <Drawer
           variant="temporary"
           open={mobileOpen}
@@ -237,7 +279,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           variant="permanent"
           sx={{
             display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: currentDrawerWidth,
+              transition: 'width 0.2s',
+              overflowX: 'hidden',
+            },
           }}
           open
         >
@@ -249,7 +296,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         sx={{
           flexGrow: 1,
           p: 1,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          width: { sm: `calc(100% - ${currentDrawerWidth}px)` },
+          transition: 'width 0.2s',
         }}
       >
         <Toolbar />

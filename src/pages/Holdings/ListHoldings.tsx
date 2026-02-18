@@ -966,11 +966,6 @@ function StockDetailsTable({
               <TableRow key={s.id} hover sx={{ '&:last-child td': { border: 0 } }}>
                 <TableCell>
                   <Typography variant="body2" fontWeight={700}>{s.symbol}</Typography>
-                  {s.name && (
-                    <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 140, display: 'block' }}>
-                      {s.name}
-                    </Typography>
-                  )}
                   <Typography variant="caption" color={getDaysAgoColor(s.updated_at)}>
                     {formatDaysAgo(s.updated_at)}
                   </Typography>
