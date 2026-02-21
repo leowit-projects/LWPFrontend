@@ -124,6 +124,7 @@ const ListStocks: React.FC = () => {
   const [industries, setIndustries] = useState<string[]>([]);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [selectedStocks, setSelectedStocks] = useState<string[]>([]); // New state for selected stock symbols
+  const [sectorButtonFilter, setSectorButtonFilter] = useState<string>('All');
 
   useEffect(() => {
     loadStocks();
@@ -142,17 +143,32 @@ const ListStocks: React.FC = () => {
   }, [stocks]);
 
   useEffect(() => {
-    // Filter stocks based on selected industries
-    if (selectedIndustries.length === 0) {
-      setFilteredStocks(stocks);
-    } else {
-      setFilteredStocks(
-        stocks.filter((stock) => 
-          stock.sector_industry && selectedIndustries.includes(stock.sector_industry)
-        )
+    let result = stocks;
+
+    // First apply sector button filter
+    if (sectorButtonFilter !== 'All') {
+      if (sectorButtonFilter === 'Others') {
+        result = result.filter(stock => 
+          !['Finance', 'Auto Ancillary', 'FMCG', 'Healthcare', 'Software Services', 'Energy'].includes(
+            stock.sector_industry?.split(' - ')[0] || ''
+          )
+        );
+      } else {
+        result = result.filter(stock => 
+          stock.sector_industry?.split(' - ')[0] === sectorButtonFilter
+        );
+      }
+    }
+
+    // Then apply industry dropdown filter
+    if (selectedIndustries.length > 0) {
+      result = result.filter((stock) => 
+        stock.sector_industry && selectedIndustries.includes(stock.sector_industry)
       );
     }
-  }, [selectedIndustries, stocks]);
+
+    setFilteredStocks(result);
+  }, [selectedIndustries, stocks, sectorButtonFilter]);
 
   const loadStocks = async (): Promise<void> => {
     setLoading(true);
@@ -697,6 +713,38 @@ const ListStocks: React.FC = () => {
             color="primary"
             variant="outlined"
           />
+        </Box>
+      </Box>
+
+      {/* Sector Button Group Filter */}
+      <Box sx={{ mb: 2 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          {['All', 'Finance', 'Auto Ancillary', 'FMCG', 'Healthcare', 'Software Services', 'Energy', 'Others'].map((sec) => (
+            <Button
+              key={sec}
+              variant={sectorButtonFilter === sec ? 'contained' : 'outlined'}
+              size="small"
+              onClick={() => setSectorButtonFilter(sec)}
+              sx={{
+                fontSize: '0.72rem',
+                py: 0.4,
+                px: 1.5,
+                textTransform: 'none',
+                fontWeight: sectorButtonFilter === sec ? 700 : 500,
+                ...(sectorButtonFilter === sec ? {
+                  bgcolor: '#1976d2',
+                  color: 'white',
+                  '&:hover': { bgcolor: '#1565c0' }
+                } : {
+                  borderColor: '#ddd',
+                  color: 'text.secondary',
+                  '&:hover': { borderColor: '#bbb', bgcolor: '#f5f5f5' }
+                })
+              }}
+            >
+              {sec}
+            </Button>
+          ))}
         </Box>
       </Box>
 

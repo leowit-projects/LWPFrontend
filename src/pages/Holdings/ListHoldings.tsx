@@ -30,6 +30,8 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Checkbox,
+  Button,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -820,7 +822,7 @@ function StockRecommendationsTable({
       <Box
         sx={{
           p: 1.5,
-          background: 'linear-gradient(90deg,#667eea,#764ba2)',
+          background: 'linear-gradient(90deg, #667eea, #764ba2)',
           borderRadius: '4px 4px 0 0',
           display: 'flex',
           alignItems: 'center',
@@ -911,6 +913,8 @@ function StockDetailsTable({
   const [sortBy, setSortBy] = useState<SortKey>('invested_value');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [sectorFilter, setSectorFilter] = useState<string>('All');
+  const [sectorButtonFilter, setSectorButtonFilter] = useState<string>('All');
+  const [selectedStocks, setSelectedStocks] = useState<string[]>([]);
 
   const handleSort = (col: SortKey) => {
     if (sortBy === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -924,9 +928,16 @@ function StockDetailsTable({
     return ['All', ...Array.from(set).sort()];
   }, [stocks]);
 
+  // Apply both dropdown and button group filters
+  const filteredByButton = sectorButtonFilter === 'All' 
+    ? stocks 
+    : sectorButtonFilter === 'Others'
+      ? stocks.filter((s) => !['Finance', 'Auto Ancillary', 'FMCG', 'Healthcare', 'Software Services', 'Energy'].includes(s.sector || ''))
+      : stocks.filter((s) => s.sector === sectorButtonFilter);
+  
   const filteredStocks = sectorFilter === 'All'
-    ? stocks
-    : stocks.filter((s) => (s.sector || 'Unknown') === sectorFilter);
+    ? filteredByButton
+    : filteredByButton.filter((s) => (s.sector || 'Unknown') === sectorFilter);
 
   const sortedStocks = [...filteredStocks].sort((a, b) => {
     if (sortBy === 'symbol') {
@@ -935,6 +946,27 @@ function StockDetailsTable({
     }
     return sortDir === 'asc' ? a[sortBy] - b[sortBy] : b[sortBy] - a[sortBy];
   });
+  const handleGetSymbols = () => {
+    const selectedStockData = stocks
+      .filter(stock => selectedStocks.includes(stock.symbol))
+      .map(stock => ({
+        symbol: stock.symbol,
+        price: stock.last_close_price ? Math.round(stock.last_close_price) : 0
+      }))
+      .sort((a, b) => a.symbol.localeCompare(b.symbol));
+
+    const formattedOutput = selectedStockData
+      .map(stock => `${stock.symbol} - ${stock.price}`)
+      .join('\n');
+
+    navigator.clipboard.writeText(formattedOutput).then(() => {
+      alert(`Selected Symbols (${selectedStockData.length}):\n\n${formattedOutput}\n\nCopied to clipboard!`);
+    }).catch(err => {
+      console.error('Failed to copy to clipboard:', err);
+      alert(`Selected Symbols (${selectedStockData.length}):\n\n${formattedOutput}`);
+    });
+  };
+
 
   const sortHeader = (col: SortKey, label: string) => (
     <TableSortLabel
@@ -953,7 +985,7 @@ function StockDetailsTable({
       <Box
         sx={{
           p: 1.5,
-          background: 'linear-gradient(90deg,#4facfe,#00f2fe)',
+          background: 'linear-gradient(90deg, #667eea, #764ba2)',
           borderRadius: '4px 4px 0 0',
           display: 'flex',
           alignItems: 'center',
@@ -969,7 +1001,17 @@ function StockDetailsTable({
           size="small"
           sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: 'white', fontWeight: 700, height: 20 }}
         />
-        <Box sx={{ ml: 'auto' }}>
+        <Box sx={{ ml: 'auto', display: 'flex', gap: 1, alignItems: 'center' }}>
+          {selectedStocks.length > 0 && (
+            <Button
+              variant="contained"
+              size="small"
+              onClick={handleGetSymbols}
+              sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: 'white', fontWeight: 600, '&:hover': { bgcolor: 'rgba(255,255,255,0.35)' } }}
+            >
+              Get Symbols ({selectedStocks.length})
+            </Button>
+          )}
           <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel
               sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem',
@@ -999,10 +1041,57 @@ function StockDetailsTable({
           </FormControl>
         </Box>
       </Box>
+      
+      {/* Sector Button Group Filter */}
+      <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', bgcolor: '#fafafa' }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          {['All', 'Finance', 'Auto Ancillary', 'FMCG', 'Healthcare', 'Software Services', 'Energy', 'Others'].map((sec) => (
+            <Button
+              key={sec}
+              variant={sectorButtonFilter === sec ? 'contained' : 'outlined'}
+              size="small"
+              onClick={() => setSectorButtonFilter(sec)}
+              sx={{
+                fontSize: '0.72rem',
+                py: 0.4,
+                px: 1.5,
+                textTransform: 'none',
+                fontWeight: sectorButtonFilter === sec ? 700 : 500,
+                ...(sectorButtonFilter === sec ? {
+                  bgcolor: '#1976d2',
+                  color: 'white',
+                  '&:hover': { bgcolor: '#1565c0' }
+                } : {
+                  borderColor: '#ddd',
+                  color: 'text.secondary',
+                  '&:hover': { borderColor: '#bbb', bgcolor: '#f5f5f5' }
+                })
+              }}
+            >
+              {sec}
+            </Button>
+          ))}
+        </Box>
+      </Box>
+      
       <TableContainer>
         <Table size="small">
           <TableHead>
             <TableRow sx={{ bgcolor: '#f8f9ff' }}>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  checked={selectedStocks.length === filteredStocks.length && filteredStocks.length > 0}
+                  indeterminate={selectedStocks.length > 0 && selectedStocks.length < filteredStocks.length}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedStocks(filteredStocks.map(s => s.symbol));
+                    } else {
+                      setSelectedStocks([]);
+                    }
+                  }}
+                  size="small"
+                />
+              </TableCell>
               <TableCell>{sortHeader('symbol', 'Symbol')}</TableCell>
               <TableCell>
                 <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase">Sector</Typography>
@@ -1022,6 +1111,19 @@ function StockDetailsTable({
           <TableBody>
             {sortedStocks.map((s) => (
               <TableRow key={s.id} hover sx={{ '&:last-child td': { border: 0 } }}>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    checked={selectedStocks.includes(s.symbol)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedStocks([...selectedStocks, s.symbol]);
+                      } else {
+                        setSelectedStocks(selectedStocks.filter(sym => sym !== s.symbol));
+                      }
+                    }}
+                    size="small"
+                  />
+                </TableCell>
                 <TableCell>
                   <Typography variant="body2" fontWeight={700}>{s.symbol}</Typography>
                   <Typography variant="caption" color={getDaysAgoColor(s.updated_at)}>
@@ -1132,7 +1234,7 @@ function StockDetailsTable({
                             symbolPrefix = '✗ ';
                             symbolColor = '#e35252';
                           } else if (signal.signal === 'Strong No Buy') {
-                            symbolPrefix = '✗✗';
+                            symbolPrefix = '✗✗ ';
                             symbolColor = '#d32f2f';
                           }
                           
