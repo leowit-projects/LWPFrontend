@@ -117,50 +117,6 @@ const getProgressColor = (percentage: number): 'error' | 'warning' | 'success' =
   return 'error';
 };
 
-const getMASignal = (
-  avgPrice: number | null | undefined,
-  closePrice: number | null | undefined,
-  ma20: number | null | undefined,
-  ma200: number | null | undefined
-): { signal: string; color: string; chipColor: 'success' | 'error' | 'warning' | 'default' } => {
-  if (!avgPrice || !closePrice || !ma20 || !ma200) {
-    return { signal: 'No Data', color: 'text.disabled', chipColor: 'default' };
-  }
-
-  const belowClose = avgPrice < closePrice;
-  const belowMA20 = avgPrice < ma20;
-  const belowMA200 = avgPrice < ma200;
-
-  const closeBelowMA20 = closePrice < ma20;
-  const closeBelowMA200 = closePrice < ma200;
-
-  const ma20BelowMA200 = ma20 < ma200;
-
-  if (belowClose && belowMA20 && belowMA200) {
-    return { signal: 'Too Low', color: 'success.main', chipColor: 'success' };
-  }
-  
-  if (!belowClose && belowMA20 && belowMA200) {
-    if (closeBelowMA20 && closeBelowMA200) {
-      return { signal: 'Too High', color: 'error.main', chipColor: 'error' };
-    }
-    return { signal: 'Low', color: 'success.light', chipColor: 'success' };
-  }
-
-  if (!belowClose && !belowMA20 && belowMA200) {
-    if (ma20BelowMA200) {
-      return { signal: 'Too High', color: 'error.main', chipColor: 'error' };
-    }
-    return { signal: 'High', color: 'error.light', chipColor: 'error' };
-  }
-
-  if (!belowClose && !belowMA20 && !belowMA200) {
-    return { signal: 'Too High', color: 'error.main', chipColor: 'error' };
-  }
-
-  return { signal: 'Neutral', color: 'warning.main', chipColor: 'warning' };
-};
-
 // Get buy signal based on average price vs last close and MA20
 const getAvgPriceBuySignal = (
   avgPrice: number | null | undefined,
