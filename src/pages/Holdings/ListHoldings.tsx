@@ -101,6 +101,66 @@ const PIE_NAMED_SECTORS = [
   'Auto Ancillary',
 ];
 
+// ─── 52W Range & MA helpers ──────────────────────────────────────────────────
+
+const calculate52WeekPosition = (current: number | null, low: number | null, high: number | null): number => {
+  if (current == null || low == null || high == null || high === low) {
+    return 0;
+  }
+  const position = ((current - low) / (high - low)) * 100;
+  return Math.max(0, Math.min(100, position));
+};
+
+const getProgressColor = (percentage: number): 'error' | 'warning' | 'success' => {
+  if (percentage < 28) return 'success';
+  if (percentage < 55) return 'warning';
+  return 'error';
+};
+
+const getMASignal = (
+  avgPrice: number | null | undefined,
+  closePrice: number | null | undefined,
+  ma20: number | null | undefined,
+  ma200: number | null | undefined
+): { signal: string; color: string; chipColor: 'success' | 'error' | 'warning' | 'default' } => {
+  if (!avgPrice || !closePrice || !ma20 || !ma200) {
+    return { signal: 'No Data', color: 'text.disabled', chipColor: 'default' };
+  }
+
+  const belowClose = avgPrice < closePrice;
+  const belowMA20 = avgPrice < ma20;
+  const belowMA200 = avgPrice < ma200;
+
+  const closeBelowMA20 = closePrice < ma20;
+  const closeBelowMA200 = closePrice < ma200;
+
+  const ma20BelowMA200 = ma20 < ma200;
+
+  if (belowClose && belowMA20 && belowMA200) {
+    return { signal: 'Too Low', color: 'success.main', chipColor: 'success' };
+  }
+  
+  if (!belowClose && belowMA20 && belowMA200) {
+    if (closeBelowMA20 && closeBelowMA200) {
+      return { signal: 'Too High', color: 'error.main', chipColor: 'error' };
+    }
+    return { signal: 'Low', color: 'success.light', chipColor: 'success' };
+  }
+
+  if (!belowClose && !belowMA20 && belowMA200) {
+    if (ma20BelowMA200) {
+      return { signal: 'Too High', color: 'error.main', chipColor: 'error' };
+    }
+    return { signal: 'High', color: 'error.light', chipColor: 'error' };
+  }
+
+  if (!belowClose && !belowMA20 && !belowMA200) {
+    return { signal: 'Too High', color: 'error.main', chipColor: 'error' };
+  }
+
+  return { signal: 'Neutral', color: 'warning.main', chipColor: 'warning' };
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const formatCurrency = (value: number, currency: string): string => {
@@ -839,6 +899,10 @@ function StockDetailsTable({
     quantity: number;
     average_price: number;
     last_close_price?: number | null;
+    price_52w_low?: number | null;
+    price_52w_high?: number | null;
+    moving_average_20?: number | null;
+    moving_average_200?: number | null;
     invested_value: number;
     current_value: number;
     profit_loss: number;
@@ -947,13 +1011,13 @@ function StockDetailsTable({
             <TableRow sx={{ bgcolor: '#f8f9ff' }}>
               <TableCell>{sortHeader('symbol', 'Symbol')}</TableCell>
               <TableCell>
-                <Typography variant="caption" fontWeight={700} textTransform="uppercase" color="text.secondary">Sector</Typography>
+                <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase">Sector</Typography>
+              </TableCell>
+              <TableCell align="center">
+                <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase">Last Close / 52W Range</Typography>
               </TableCell>
               <TableCell align="right">{sortHeader('quantity', 'Qty')}</TableCell>
-              <TableCell align="right">{sortHeader('average_price', 'Avg Price')}</TableCell>
-              <TableCell align="right">
-                <Typography variant="caption" fontWeight={700} textTransform="uppercase" color="text.secondary">Last Close</Typography>
-              </TableCell>
+              <TableCell align="center">{sortHeader('average_price', 'Avg Price')}</TableCell>
               <TableCell align="right">{sortHeader('invested_value', 'Invested')}</TableCell>
               <TableCell align="right">{sortHeader('current_value', 'Current')}</TableCell>
               <TableCell align="right">{sortHeader('profit_loss', 'P&L')}</TableCell>
@@ -977,16 +1041,204 @@ function StockDetailsTable({
                     <Typography variant="body2" color="text.disabled">—</Typography>
                   )}
                 </TableCell>
+                <TableCell>
+                  {s.price_52w_low != null && s.price_52w_high != null && s.last_close_price != null ? (
+                    <Tooltip
+                      title={
+                        <Box>
+                          <Typography variant="caption" display="block">
+                            Current: {formatCurrency(s.last_close_price, s.currency)}
+                          </Typography>
+                          <Typography variant="caption" display="block">
+                            52w Low: {formatCurrency(s.price_52w_low, s.currency)}
+                          </Typography>
+                          <Typography variant="caption" display="block">
+                            52w High: {formatCurrency(s.price_52w_high, s.currency)}
+                          </Typography>
+                          <Typography variant="caption" display="block" fontWeight={600}>
+                            Position: {calculate52WeekPosition(s.last_close_price, s.price_52w_low, s.price_52w_high).toFixed(1)}%
+                          </Typography>
+                        </Box>
+                      }
+                      arrow
+                    >
+                      <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 180 }}>
+                        <Typography variant="caption" fontSize="0.6rem" color="text.primary" fontWeight={700} textAlign="center">
+                          {s.last_close_price ? formatCurrency(s.last_close_price, s.currency) : '—'}
+                        </Typography>
+                        <LinearProgress
+                          variant="determinate"
+                          value={calculate52WeekPosition(s.last_close_price, s.price_52w_low, s.price_52w_high)}
+                          color={getProgressColor(calculate52WeekPosition(s.last_close_price, s.price_52w_low, s.price_52w_high))}
+                          sx={{
+                            height: 6,
+                            borderRadius: 1,
+                            backgroundColor: 'grey.300',
+                          }}
+                        />
+                        <Box display="flex" justifyContent="space-between">
+                          <Typography variant="caption" fontSize="0.6rem" color="text.secondary" fontWeight={500}>
+                            {formatCurrency(s.price_52w_low, s.currency)}
+                          </Typography>
+                          <Typography variant="caption" fontSize="0.6rem" color="text.secondary" fontWeight={500}>
+                            {formatCurrency(s.price_52w_high, s.currency)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Tooltip>
+                  ) : (
+                    <Typography variant="caption" color="text.secondary">No data</Typography>
+                  )}
+                </TableCell>
                 <TableCell align="right">
                   <Typography variant="body2">{s.quantity.toLocaleString()}</Typography>
                 </TableCell>
-                <TableCell align="right">
+                {/* <TableCell align="right">
                   <Typography variant="body2">{formatCurrency(s.average_price, s.currency)}</Typography>
-                </TableCell>
-                <TableCell align="right">
-                  <Typography variant="body2">
-                    {s.last_close_price ? formatCurrency(s.last_close_price, s.currency) : '—'}
-                  </Typography>
+                </TableCell> */}
+                <TableCell>
+                  {s.average_price && s.moving_average_20 && s.moving_average_200 ? (() => {
+                    const dataPoints = [
+                      { value: s.average_price, label: 'Avg. Price', color: null },
+                      { value: s.last_close_price ?? s.average_price, label: 'Last Close', color: '#9e9e9e' },
+                      { value: s.moving_average_20, label: '20d', color: '#2196f3' },
+                      { value: s.moving_average_200, label: '200d', color: '#ff9800' }
+                    ];
+
+                    // Sort by value to find min, middle, max
+                    const sorted = [...dataPoints].sort((a, b) => a.value - b.value);
+                    const minItem = sorted[0];
+                    const middleItem = sorted[1];
+                    const maxItem = sorted[2];
+                    
+                    const minValue = minItem.value;
+                    const maxValue = maxItem.value;
+                    const range = maxValue - minValue;
+                    
+                    // Calculate positions
+                    const avgPricePosition = range > 0 ? ((s.average_price - minValue) / range) * 100 : 50;
+                    const ma20Position = range > 0 ? ((s.moving_average_20 - minValue) / range) * 100 : 50;
+                    const ma200Position = range > 0 ? ((s.moving_average_200 - minValue) / range) * 100 : 50;
+                    
+                    // Determine signal based on price position
+                    const signal = getMASignal(s.average_price, s.last_close_price, s.moving_average_20, s.moving_average_200);
+                    let signalLabel = '';
+                    let signalColor = '';
+                    let signalWeight: number | undefined = undefined;
+                    
+                    switch (signal.signal) {
+                      case 'Too High':
+                        signalLabel = "Buy";
+                        signalColor = '#007b04';
+                        signalWeight = 800;
+                        break;
+                      case 'High':
+                        signalLabel = 'Buy';
+                        signalColor = '#00cf07';
+                        signalWeight = 500;
+                        break;
+                      case 'Neutral':
+                        signalLabel = 'Neutral';
+                        signalColor = '#ff9800';
+                        signalWeight = 500;
+                        break;
+                      case 'Low':
+                        signalLabel = 'No Buy';
+                        signalColor = '#ff1100';
+                        signalWeight = 500;
+                        break;
+                      case 'Too Low':
+                        signalLabel = 'No Buy';
+                        signalColor = '#be0d00';
+                        signalWeight = 800;
+                        break;
+                      default:
+                        signalLabel = 'Neutral';
+                        signalColor = '#9e9e9e';
+                        signalWeight = 500;
+                    }
+                    
+                    // Middle marker color is always black
+                    const middleColor = '#000000';
+
+                    return (
+                      <Tooltip
+                        title={
+                          <Box>
+                            {sorted.map((d) => (
+                              <Typography key={d.label} variant="caption" display="block">
+                                {d.label}: {formatCurrency(d.value, s.currency)}
+                              </Typography>
+                            ))}
+                          </Box>
+                        }
+                        arrow
+                      >
+                        <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 180 }}>
+                          <Typography variant="caption" fontSize="0.6rem" color="text.primary" fontWeight={700} textAlign="center">
+                            {s.average_price ? formatCurrency(s.average_price, s.currency) : '—'}
+                          </Typography>
+                          {/* Main progress bar */}
+                          <Box sx={{ position: 'relative', width: '100%', height: 8 }}>
+                            <LinearProgress
+                              variant="determinate"
+                              value={100}
+                              sx={{
+                                height: 6,
+                                borderRadius: 1,
+                                backgroundColor: 'grey.300',
+                                '& .MuiLinearProgress-bar': {
+                                  backgroundColor: 'transparent',
+                                },
+                              }}
+                            />
+                            {/* Middle value marker */}
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                left: `${middleItem.label === 'Avg. Price' ? avgPricePosition : 
+                                        middleItem.label === '20d' ? ma20Position : ma200Position}%`,
+                                top: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                width: 3,
+                                height: 12,
+                                backgroundColor: middleColor,
+                                borderRadius: 0.5,
+                                zIndex: 3,
+                                border: '1px solid white',
+                              }}
+                            />
+                          </Box>
+                          {/* Labels */}
+                          <Box display="flex" justifyContent="space-between" alignItems="center">
+                            <Typography variant="caption" fontSize="0.65rem" color="text.secondary" fontWeight={300}>
+                              {minItem.label}
+                            </Typography>
+                            <Box 
+                              sx={{  
+                                display: 'flex',
+                                alignItems: 'center'
+                              }}
+                            >
+                              <Typography variant="caption" fontSize="0.6rem" color={signalColor} fontWeight={signalWeight} sx={{ textTransform: 'uppercase' }}>
+                                {signalLabel}
+                              </Typography>
+                            </Box>
+                            <Typography variant="caption" fontSize="0.66rem" color="text.secondary" fontWeight={300}>
+                              {maxItem.label}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Tooltip>
+                    );
+                  })() : (
+                    <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 180 }}>
+                      <Typography variant="caption" fontSize="0.7rem" color="text.primary" fontWeight={700} textAlign="center">
+                        {s.average_price ? formatCurrency(s.average_price, s.currency) : '—'}
+                      </Typography>
+                    </Box>
+                    
+                  )}  
                 </TableCell>
                 <TableCell align="right">
                   <Typography variant="body2">{formatCurrency(s.invested_value, s.currency)}</Typography>

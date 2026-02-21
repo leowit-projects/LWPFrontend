@@ -415,6 +415,10 @@ export interface HoldingDetail {
     currency: string;
     invested_value: number;
     last_close_price?: number | null;
+    price_52w_low?: number | null;
+    price_52w_high?: number | null;
+    moving_average_20?: number | null;
+    moving_average_200?: number | null;
     current_value: number;
     profit_loss: number;
     profit_loss_percentage: number;
