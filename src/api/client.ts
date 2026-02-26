@@ -126,6 +126,9 @@ export const stockAPI = {
     update: (symbol: string, data: StockSymbolCreate): Promise<AxiosResponse<StockSymbol>> =>
         api.put<StockSymbol>(`/api/stocks/${symbol}`, data),
 
+    updatePurchaseEligibility: (symbol: string, is_purchase_eligible: boolean): Promise<AxiosResponse<StockSymbol>> =>
+        api.patch<StockSymbol>(`/api/stocks/${symbol}/purchase-eligibility`, { is_purchase_eligible }),
+
     delete: (symbol: string): Promise<AxiosResponse<{ message: string }>> =>
         api.delete(`/api/stocks/${symbol}`),
 };

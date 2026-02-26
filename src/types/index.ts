@@ -77,6 +77,7 @@ export interface StockSymbol {
     asset_type: AssetType;
     sector_industry?: string;
     is_active: boolean;
+    is_purchase_eligible: boolean;
     price_last_close?: number;
     price_52w_low?: number;
     price_52w_high?: number;

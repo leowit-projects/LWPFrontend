@@ -135,6 +135,7 @@ const Stocks: React.FC = () => {
       currency: stock.currency,
       exchange: stock.exchange || '',
       industry_id: industryId,
+      is_purchase_eligible: stock.is_purchase_eligible ?? true,
     });
     setOpenDialog(true);
   };
@@ -158,8 +159,16 @@ const Stocks: React.FC = () => {
 
       if (editMode && selectedStock) {
         await stockAPI.update(selectedStock.symbol, trimmedData);
+        // Sync purchase eligibility separately since it uses its own endpoint
+        if (formData.is_purchase_eligible !== selectedStock.is_purchase_eligible) {
+          await stockAPI.updatePurchaseEligibility(selectedStock.symbol, formData.is_purchase_eligible);
+        }
       } else {
         await stockAPI.create(trimmedData);
+        // Sync purchase eligibility separately since it uses its own endpoint
+        if (formData.is_purchase_eligible !== undefined) {
+          await stockAPI.updatePurchaseEligibility(trimmedData.symbol, formData.is_purchase_eligible);
+        }
       }
       handleCloseDialog();
       loadData();
@@ -182,6 +191,16 @@ const Stocks: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to delete:', error);
       alert(error.response?.data?.detail || 'Failed to delete');
+    }
+  };
+
+  const handleTogglePurchaseEligibility = async (symbol: string, currentValue: boolean): Promise<void> => {
+    try {
+      await stockAPI.updatePurchaseEligibility(symbol, !currentValue);
+      loadData();
+    } catch (error: any) {
+      console.error('Failed to update purchase eligibility:', error);
+      alert(error.response?.data?.detail || 'Failed to update purchase eligibility');
     }
   };
 
@@ -214,8 +233,39 @@ const Stocks: React.FC = () => {
 
   // Updated columns definition
   const columns: GridColDef[] = [
-    { field: 'symbol', headerName: 'Symbol', width: 120 },
-    { field: 'name', headerName: 'Name', width: 200 },
+    { 
+      field: 'symbol', 
+      headerName: 'Symbol', 
+      width: 120, 
+      renderCell: (params: GridRenderCellParams) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <span style={{ textDecoration: params.row.is_purchase_eligible ? 'none' : 'line-through', color: params.row.is_purchase_eligible ? 'inherit' : 'text.disabled' }}>
+            {params.value}
+          </span>
+        </Box>
+      ), 
+    },
+    { 
+      field: 'name', 
+      headerName: 'Name', 
+      width: 200
+    },
+    {
+      field: 'is_purchase_eligible',
+      headerName: 'Purchasable',
+      width: 120,
+      renderCell: (params: GridRenderCellParams) => (
+        <Tooltip title={params.value ? 'Click to mark not purchasable' : 'Click to mark purchasable'}>
+          <Chip
+            label={params.value ? 'Yes' : 'No'}
+            color={params.value ? 'success' : 'error'}
+            size="small"
+            onClick={() => handleTogglePurchaseEligibility(params.row.symbol, params.value)}
+            sx={{ cursor: 'pointer' }}
+          />
+        </Tooltip>
+      ),
+    },
     { field: 'sector_industry', headerName: 'Industry', width: 300 },
     { field: 'currency', headerName: 'Currency', width: 100 },
     { field: 'exchange', headerName: 'Exchange', width: 120 },
@@ -388,6 +438,17 @@ const Stocks: React.FC = () => {
                 </MenuItem>
               ))}
             </TextField>
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel>Purchase Eligible</InputLabel>
+              <Select
+                value={formData.is_purchase_eligible === false ? 'false' : 'true'}
+                label="Purchase Eligible"
+                onChange={(e) => setFormData({ ...formData, is_purchase_eligible: e.target.value === 'true' })}
+              >
+                <MenuItem value="true">Yes — Hold in portfolio</MenuItem>
+                <MenuItem value="false">No — Exclude from portfolio</MenuItem>
+              </Select>
+            </FormControl>
           </Box>
         </DialogContent>
         <DialogActions>

@@ -20,6 +20,7 @@ import {
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { stockAPI } from '../api/client';
 import { StockSymbol } from '../types';
+// import { getSectorEmoji } from '../utils/sectorEmojis';
 
 // Helper function to calculate days difference
 const getDaysAgo = (date: string | null): string => {
@@ -263,10 +264,14 @@ const ListStocks: React.FC = () => {
       renderCell: (params: GridRenderCellParams) => {
         const recommendation = params.row.recommendation;
         const showChip = recommendation === 'BUY' || recommendation === 'SELL';
+        const isNotEligible = params.row.is_purchase_eligible === false;
+        // const sectorEmoji = getSectorEmoji(params.row.sector_industry);
 
         return (
-          <>
-          <Box display="flex" alignItems="center" gap={0.5}>
+          <Box display="flex" alignItems="center" gap={0.75}>
+            {/* <Tooltip title={params.row.sector_industry || 'No sector available'} arrow>
+              <span style={{ fontSize: '1.2rem', lineHeight: 1, marginTop: -8 }}>{sectorEmoji}</span>
+            </Tooltip> */}
             <Tooltip title={params.row.name || 'No name available'} arrow>
               <Link
                 component={RouterLink}
@@ -284,7 +289,9 @@ const ListStocks: React.FC = () => {
                   mt: -1,
                 }}
               >
-                {params.value}
+                <span style={{ textDecoration: isNotEligible ? 'line-through' : 'none', color: isNotEligible ? 'text.disabled' : 'inherit' }}>
+                    {params.value}
+                </span>
               </Link>
             </Tooltip>
             {showChip && (
@@ -297,6 +304,7 @@ const ListStocks: React.FC = () => {
                   fontSize: '0.65rem',
                   fontWeight: 700,
                   backgroundColor: recommendation === 'BUY' ? 'success.main' : 'error.main',
+                  mt: -1,
                   color: 'white',
                   '& .MuiChip-label': {
                     padding: '0 4px',
@@ -305,8 +313,6 @@ const ListStocks: React.FC = () => {
               />
             )}
           </Box>
-          
-          </>
         );
       },
     },
