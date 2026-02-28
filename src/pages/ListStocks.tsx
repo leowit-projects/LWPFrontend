@@ -127,6 +127,10 @@ const ListStocks: React.FC = () => {
   const [selectedStocks, setSelectedStocks] = useState<string[]>([]); // New state for selected stock symbols
   const [sectorButtonFilter, setSectorButtonFilter] = useState<string>('All');
 
+  // Split filtered stocks by market
+  const indiaStocks = filteredStocks.filter(s => s.currency === 'INR');
+  const usStocks = filteredStocks.filter(s => s.currency === 'USD');
+
   useEffect(() => {
     loadStocks();
   }, []);
@@ -220,8 +224,8 @@ const ListStocks: React.FC = () => {
     });
   };
 
-  // Define DataGrid columns
-  const columns: GridColDef[] = [
+  // Define DataGrid columns — accepts the specific table's rows so select-all works per table
+  const getColumns = (tableStocks: StockSymbol[]): GridColDef[] => [
     {
       field: 'checkbox',
       headerName: '',
@@ -231,13 +235,20 @@ const ListStocks: React.FC = () => {
       disableColumnMenu: true,
       renderHeader: () => (
         <Checkbox
-          checked={selectedStocks.length === filteredStocks.length && filteredStocks.length > 0}
-          indeterminate={selectedStocks.length > 0 && selectedStocks.length < filteredStocks.length}
+          checked={
+            tableStocks.length > 0 &&
+            tableStocks.every(s => selectedStocks.includes(s.symbol))
+          }
+          indeterminate={
+            tableStocks.some(s => selectedStocks.includes(s.symbol)) &&
+            !tableStocks.every(s => selectedStocks.includes(s.symbol))
+          }
           onChange={(e) => {
+            const tableSymbols = tableStocks.map(s => s.symbol);
             if (e.target.checked) {
-              setSelectedStocks(filteredStocks.map(stock => stock.symbol));
+              setSelectedStocks(prev => Array.from(new Set([...prev, ...tableSymbols])));
             } else {
-              setSelectedStocks([]);
+              setSelectedStocks(prev => prev.filter(sym => !tableSymbols.includes(sym)));
             }
           }}
         />
@@ -715,7 +726,7 @@ const ListStocks: React.FC = () => {
             </Typography>
           )}
           <Chip 
-            label={`${filteredStocks.length} of ${stocks.length} stocks`}
+            label={`🇮🇳 ${indiaStocks.length} · 🇺🇸 ${usStocks.length} of ${stocks.length} stocks`}
             color="primary"
             variant="outlined"
           />
@@ -812,38 +823,63 @@ const ListStocks: React.FC = () => {
         </Box>
       </Paper>
 
-      {/* Data Grid */}
-      <Paper sx={{ width: '100%', p: 2 }}>
+      {/* India Stocks */}
+      <Paper sx={{ width: '100%', p: 2, mb: 3 }}>
+        <Box display="flex" alignItems="center" gap={1} mb={1}>
+          <Typography variant="subtitle1" fontWeight={700}>
+            🇮🇳 India Stocks
+          </Typography>
+          <Chip label={`${indiaStocks.length} stocks`} size="small" color="primary" variant="outlined" />
+        </Box>
         <Box sx={{ height: '90vh', width: '100%' }}>
           <DataGrid
-            rows={filteredStocks}
-            columns={columns}
+            rows={indiaStocks}
+            columns={getColumns(indiaStocks)}
             loading={loading}
             getRowId={(row) => row.symbol}
             disableRowSelectionOnClick
             pageSizeOptions={[50, 100, 150]}
             initialState={{
-              pagination: {
-                paginationModel: { pageSize: 50, page: 0 },
-              },
-              sorting: {
-                sortModel: [{ field: '52w_range', sort: 'asc' }],
-              },
+              pagination: { paginationModel: { pageSize: 50, page: 0 } },
+              sorting: { sortModel: [{ field: '52w_range', sort: 'asc' }] },
             }}
             rowHeight={60}
             sx={{
-              '& .MuiDataGrid-cell': {
-                padding: '8px',
-              },
-              '& .MuiDataGrid-columnHeaders': {
-                backgroundColor: 'grey.50',
-              },
-              '& .MuiDataGrid-columnHeader': {
-                color: 'primary.main',
-              },
-              '.MuiDataGrid-columnHeaderTitle': {
-                fontWeight: 'bold !important',
-              },
+              '& .MuiDataGrid-cell': { padding: '8px' },
+              '& .MuiDataGrid-columnHeaders': { backgroundColor: 'grey.50' },
+              '& .MuiDataGrid-columnHeader': { color: 'primary.main' },
+              '.MuiDataGrid-columnHeaderTitle': { fontWeight: 'bold !important' },
+            }}
+          />
+        </Box>
+      </Paper>
+
+      {/* US Stocks */}
+      <Paper sx={{ width: '100%', p: 2 }}>
+        <Box display="flex" alignItems="center" gap={1} mb={1}>
+          <Typography variant="subtitle1" fontWeight={700}>
+            🇺🇸 US Stocks
+          </Typography>
+          <Chip label={`${usStocks.length} stocks`} size="small" color="secondary" variant="outlined" />
+        </Box>
+        <Box sx={{ height: '90vh', width: '100%' }}>
+          <DataGrid
+            rows={usStocks}
+            columns={getColumns(usStocks)}
+            loading={loading}
+            getRowId={(row) => row.symbol}
+            disableRowSelectionOnClick
+            pageSizeOptions={[50, 100, 150]}
+            initialState={{
+              pagination: { paginationModel: { pageSize: 50, page: 0 } },
+              sorting: { sortModel: [{ field: '52w_range', sort: 'asc' }] },
+            }}
+            rowHeight={60}
+            sx={{
+              '& .MuiDataGrid-cell': { padding: '8px' },
+              '& .MuiDataGrid-columnHeaders': { backgroundColor: 'grey.50' },
+              '& .MuiDataGrid-columnHeader': { color: 'secondary.main' },
+              '.MuiDataGrid-columnHeaderTitle': { fontWeight: 'bold !important' },
             }}
           />
         </Box>

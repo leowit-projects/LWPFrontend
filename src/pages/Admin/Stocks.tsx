@@ -35,6 +35,8 @@ const Stocks: React.FC = () => {
   const [editMode, setEditMode] = useState<boolean>(false);
   const [selectedStock, setSelectedStock] = useState<StockSymbol | null>(null);
   const [selectedIndustry, setSelectedIndustry] = useState<string>('all');
+  const [sectorButtonFilter, setSectorButtonFilter] = useState<string>('All');
+  const [marketFilter, setMarketFilter] = useState<'All' | 'India' | 'US'>('All');
   const [formData, setFormData] = useState<any>({
     symbol: '',
     name: '',
@@ -50,7 +52,7 @@ const Stocks: React.FC = () => {
 
   useEffect(() => {
     filterStocks();
-  }, [stocks, selectedIndustry]);
+  }, [stocks, selectedIndustry, sectorButtonFilter, marketFilter]);
 
   useEffect(() => {
     // Extract unique industries from stocks
@@ -88,15 +90,38 @@ const Stocks: React.FC = () => {
   };
 
   const filterStocks = (): void => {
-    if (selectedIndustry === 'all') {
-      setFilteredStocks(stocks);
-    } else {
-      const filtered = stocks.filter(stock => {
-        const industryMatch = stock.sector_industry?.toLowerCase().includes(selectedIndustry.toLowerCase());
-        return industryMatch;
-      });
-      setFilteredStocks(filtered);
+    let result = stocks;
+
+    // Market filter
+    if (marketFilter === 'India') {
+      result = result.filter(s => s.currency === 'INR');
+    } else if (marketFilter === 'US') {
+      result = result.filter(s => s.currency === 'USD');
     }
+
+    // Sector button filter
+    if (sectorButtonFilter !== 'All') {
+      if (sectorButtonFilter === 'Others') {
+        result = result.filter(stock =>
+          !['Finance', 'Auto Ancillary', 'FMCG', 'Healthcare', 'Software Services', 'Energy'].includes(
+            stock.sector_industry?.split(' - ')[0] || ''
+          )
+        );
+      } else {
+        result = result.filter(stock =>
+          stock.sector_industry?.split(' - ')[0] === sectorButtonFilter
+        );
+      }
+    }
+
+    // Industry dropdown filter
+    if (selectedIndustry !== 'all') {
+      result = result.filter(stock =>
+        stock.sector_industry?.toLowerCase().includes(selectedIndustry.toLowerCase())
+      );
+    }
+
+    setFilteredStocks(result);
   };
 
   const handleIndustryFilterChange = (event: SelectChangeEvent<string>): void => {
@@ -327,53 +352,135 @@ const Stocks: React.FC = () => {
         Stocks Management
       </Typography>
 
-      <Paper>
-        <Box sx={{ p: 3 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-            <Box display="flex" gap={2} alignItems="center">
-              <FormControl sx={{ minWidth: 300 }}>
-                <InputLabel>Filter by Industry</InputLabel>
-                <Select
-                  value={selectedIndustry}
-                  label="Filter by Industry"
-                  onChange={handleIndustryFilterChange}
-                  startAdornment={<FilterAlt sx={{ mr: 1, color: 'action.active' }} />}
-                >
-                  <MenuItem value="all">All Industries</MenuItem>
-                  {industryNames.map((industry) => (
-                    <MenuItem key={industry} value={industry}>
-                      {industry}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <Chip 
-                label={`${filteredStocks.length} of ${stocks.length} stocks`}
-                color="primary"
-                variant="outlined"
-              />
-            </Box>
-            <Button variant="contained" startIcon={<Add />} onClick={handleOpenDialog}>
-              Add New Stock
-            </Button>
-          </Box>
-
-          <DataGrid
-            rows={filteredStocks}
-            columns={columns}
-            getRowId={getRowId}
-            loading={loading}
-            autoHeight
-            disableRowSelectionOnClick
-            initialState={{
-              pagination: {
-                paginationModel: { pageSize: 25 },
-              },
+      {/* Market Tab Filter */}
+      <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
+        {(['All', 'India', 'US'] as const).map((market) => (
+          <Button
+            key={market}
+            variant={marketFilter === market ? 'contained' : 'outlined'}
+            size="small"
+            onClick={() => setMarketFilter(market)}
+            sx={{
+              fontSize: '0.75rem',
+              textTransform: 'none',
+              fontWeight: marketFilter === market ? 700 : 500,
+              ...(marketFilter === market
+                ? { bgcolor: '#1976d2', color: 'white', '&:hover': { bgcolor: '#1565c0' } }
+                : { borderColor: '#ddd', color: 'text.secondary', '&:hover': { borderColor: '#bbb', bgcolor: '#f5f5f5' } }),
             }}
-            pageSizeOptions={[10, 25, 50, 100]}
+          >
+            {market === 'India' ? '🇮🇳 India' : market === 'US' ? '🇺🇸 US' : 'All'}
+          </Button>
+        ))}
+      </Box>
+
+      {/* Sector Button Filter */}
+      <Box sx={{ mb: 2 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          {['All', 'Finance', 'Auto Ancillary', 'FMCG', 'Healthcare', 'Software Services', 'Energy', 'Others'].map((sec) => (
+            <Button
+              key={sec}
+              variant={sectorButtonFilter === sec ? 'contained' : 'outlined'}
+              size="small"
+              onClick={() => setSectorButtonFilter(sec)}
+              sx={{
+                fontSize: '0.72rem',
+                py: 0.4,
+                px: 1.5,
+                textTransform: 'none',
+                fontWeight: sectorButtonFilter === sec ? 700 : 500,
+                ...(sectorButtonFilter === sec
+                  ? { bgcolor: '#1976d2', color: 'white', '&:hover': { bgcolor: '#1565c0' } }
+                  : { borderColor: '#ddd', color: 'text.secondary', '&:hover': { borderColor: '#bbb', bgcolor: '#f5f5f5' } }),
+              }}
+            >
+              {sec}
+            </Button>
+          ))}
+        </Box>
+      </Box>
+
+      {/* Industry Dropdown + Add Button */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Box display="flex" gap={2} alignItems="center">
+          <FormControl sx={{ minWidth: 300 }}>
+            <InputLabel>Filter by Industry</InputLabel>
+            <Select
+              value={selectedIndustry}
+              label="Filter by Industry"
+              onChange={handleIndustryFilterChange}
+              startAdornment={<FilterAlt sx={{ mr: 1, color: 'action.active' }} />}
+            >
+              <MenuItem value="all">All Industries</MenuItem>
+              {industryNames.map((industry) => (
+                <MenuItem key={industry} value={industry}>
+                  {industry}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Chip
+            label={`🇮🇳 ${filteredStocks.filter(s => s.currency === 'INR').length} · 🇺🇸 ${filteredStocks.filter(s => s.currency === 'USD').length} of ${stocks.length} stocks`}
+            color="primary"
+            variant="outlined"
           />
         </Box>
-      </Paper>
+        <Button variant="contained" startIcon={<Add />} onClick={handleOpenDialog}>
+          Add New Stock
+        </Button>
+      </Box>
+
+      {/* India Stocks Table */}
+      {(marketFilter === 'All' || marketFilter === 'India') && (
+        <Paper sx={{ mb: 3 }}>
+          <Box sx={{ p: 2 }}>
+            <Box display="flex" alignItems="center" gap={1} mb={1}>
+              <Typography variant="subtitle1" fontWeight={700}>🇮🇳 India Stocks</Typography>
+              <Chip label={`${filteredStocks.filter(s => s.currency === 'INR').length} stocks`} size="small" color="primary" variant="outlined" />
+            </Box>
+            <DataGrid
+              rows={filteredStocks.filter(s => s.currency === 'INR')}
+              columns={columns}
+              getRowId={getRowId}
+              loading={loading}
+              autoHeight
+              disableRowSelectionOnClick
+              initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+              pageSizeOptions={[10, 25, 50, 100]}
+              sx={{
+                '& .MuiDataGrid-columnHeader': { color: 'primary.main' },
+                '.MuiDataGrid-columnHeaderTitle': { fontWeight: 'bold !important' },
+              }}
+            />
+          </Box>
+        </Paper>
+      )}
+
+      {/* US Stocks Table */}
+      {(marketFilter === 'All' || marketFilter === 'US') && (
+        <Paper>
+          <Box sx={{ p: 2 }}>
+            <Box display="flex" alignItems="center" gap={1} mb={1}>
+              <Typography variant="subtitle1" fontWeight={700}>🇺🇸 US Stocks</Typography>
+              <Chip label={`${filteredStocks.filter(s => s.currency === 'USD').length} stocks`} size="small" color="secondary" variant="outlined" />
+            </Box>
+            <DataGrid
+              rows={filteredStocks.filter(s => s.currency === 'USD')}
+              columns={columns}
+              getRowId={getRowId}
+              loading={loading}
+              autoHeight
+              disableRowSelectionOnClick
+              initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+              pageSizeOptions={[10, 25, 50, 100]}
+              sx={{
+                '& .MuiDataGrid-columnHeader': { color: 'secondary.main' },
+                '.MuiDataGrid-columnHeaderTitle': { fontWeight: 'bold !important' },
+              }}
+            />
+          </Box>
+        </Paper>
+      )}
 
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>{editMode ? 'Edit Stock' : 'Add New Stock'}</DialogTitle>
