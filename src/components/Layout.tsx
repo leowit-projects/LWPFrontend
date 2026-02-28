@@ -39,6 +39,7 @@ import {
   ChevronRight,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
+import MyLogo from '../assets/lion.png';
 
 const drawerWidth = 210;
 const collapsedDrawerWidth = 60;
@@ -117,15 +118,30 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const drawer = (
     <div>
-      <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        {drawerOpen && (
-          <Typography variant="subtitle1" noWrap component="div" sx={{ color: '#667eea', fontWeight: 700  }}>
-            Leowit Portfolio
-          </Typography>
-        )}
-        <IconButton onClick={handleDrawerCollapse} 
-              size='small'
-              sx={{ ml: drawerOpen ? 0 : 'auto', mr: drawerOpen ? 0 : 'auto' }}>
+      <Toolbar
+        sx={{
+          display: 'flex',
+          flexDirection: drawerOpen ? 'row' : 'column',
+          justifyContent: drawerOpen ? 'space-between' : 'center',
+          alignItems: 'center',
+          gap: drawerOpen ? 0 : 1,
+          py: drawerOpen ? 0 : 1,
+        }}
+      >
+        <Box display="flex" alignItems="center" gap={1}>
+          <Box
+            component="img"
+            sx={{ height: drawerOpen ? 28 : 24, width: 'auto', transition: 'height 0.2s ease' }}
+            alt="Company Logo"
+            src={MyLogo}
+          />
+          {drawerOpen && (
+            <Typography variant="subtitle1" noWrap component="div" sx={{ color: '#667eea', fontWeight: 700 }}>
+              Leowit Portfolio
+            </Typography>
+          )}
+        </Box>
+        <IconButton onClick={handleDrawerCollapse} size="small">
           {drawerOpen ? <ChevronLeft /> : <ChevronRight />}
         </IconButton>
       </Toolbar>
