@@ -1923,7 +1923,7 @@ const ListHoldings: React.FC = () => {
                       <LabelList
                         dataKey="invested"
                         position="right"
-                        formatter={(v: number) => fmt(v)}
+                        formatter={(v: any) => typeof v === 'number' ? fmt(v) : ''}
                         style={{ fontSize: 10, fontWeight: 600, fill: C_INVESTED }}
                       />
                     </Bar>
@@ -1933,7 +1933,7 @@ const ListHoldings: React.FC = () => {
                       <LabelList
                         dataKey="current"
                         position="right"
-                        formatter={(v: number) => fmt(v)}
+                        formatter={(v: any) => typeof v === 'number' ? fmt(v) : ''}
                         style={{ fontSize: 10, fontWeight: 600, fill: C_CURRENT }}
                       />
                     </Bar>
@@ -1946,7 +1946,7 @@ const ListHoldings: React.FC = () => {
                       <LabelList
                         dataKey="pnl"
                         position="right"
-                        formatter={(v: number) => `${v >= 0 ? '+' : ''}${fmt(v)}`}
+                        formatter={(v: any) => typeof v === 'number' ? `${v >= 0 ? '+' : ''}${fmt(v)}` : ''}
                         style={{ fontSize: 10, fontWeight: 700, fill: '#555' }}
                       />
                     </Bar>
