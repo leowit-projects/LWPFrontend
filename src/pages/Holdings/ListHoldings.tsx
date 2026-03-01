@@ -489,7 +489,7 @@ function SectorPnLChart({
             fontWeight={700}
             color={d.pnl >= 0 ? 'success.main' : 'error.main'}
           >
-            {formatCurrency(d.pnl, currency)}
+            {formatCurrency(d.pnl, currency)} 
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 3 }}>
@@ -533,7 +533,7 @@ function SectorPnLChart({
           />
           <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
           <ReferenceLine y={0} stroke="#bbb" strokeWidth={1.5} />
-          <Bar dataKey="pnl" name="P&L" radius={[4, 4, 0, 0]} maxBarSize={56}>
+          <Bar dataKey="pnl" name="P&L" radius={[4, 4, 0, 0]} maxBarSize={80}>
             {data.map((entry, i) => (
               <Cell
                 key={i}
@@ -1670,6 +1670,31 @@ const ListHoldings: React.FC = () => {
     };
   }, [holdings?.holdings.stocks]);
 
+  // Combined Stocks + ETF aggregates for the top-level summary banner
+  const combinedTotals = useMemo(() => {
+    const stocks = holdings?.holdings.stocks ?? [];
+    const etfs   = holdings?.holdings.etfs   ?? [];
+
+    const stockInvested = stocks.reduce((a, s) => a + s.invested_value, 0);
+    const stockCurrent  = stocks.reduce((a, s) => a + s.current_value,  0);
+    const etfInvested   = etfs.reduce  ((a, e) => a + e.invested_value, 0);
+    const etfCurrent    = etfs.reduce  ((a, e) => a + e.current_value,  0);
+
+    const totalInvested = stockInvested + etfInvested;
+    const totalCurrent  = stockCurrent  + etfCurrent;
+    const totalPnl      = totalCurrent  - totalInvested;
+    const totalPnlPct   = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
+
+    return {
+      stockInvested, stockCurrent,
+      etfInvested,   etfCurrent,
+      totalInvested, totalCurrent,
+      totalPnl,      totalPnlPct,
+      stockCount: stocks.length,
+      etfCount:   etfs.length,
+    };
+  }, [holdings?.holdings.stocks, holdings?.holdings.etfs]);
+
   // ── Guards ──────────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -1745,6 +1770,194 @@ const ListHoldings: React.FC = () => {
       {/* Alerts */}
       {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+
+      {/* ── Stocks + ETFs Combined Summary ── */}
+      {(combinedTotals.stockCount > 0 || combinedTotals.etfCount > 0) && (() => {
+        const stockPnl = combinedTotals.stockCurrent - combinedTotals.stockInvested;
+        const etfPnl   = combinedTotals.etfCurrent   - combinedTotals.etfInvested;
+
+        const chartData = [
+          {
+            name: 'Stocks',
+            invested: round2(combinedTotals.stockInvested),
+            current:  round2(combinedTotals.stockCurrent),
+            pnl:      round2(stockPnl),
+          },
+          {
+            name: 'ETFs',
+            invested: round2(combinedTotals.etfInvested),
+            current:  round2(combinedTotals.etfCurrent),
+            pnl:      round2(etfPnl),
+          },
+        ];
+
+        const C_INVESTED = '#667eea';
+        const C_CURRENT  = '#4facfe';
+        const C_PNL_POS  = '#43e97b';
+        const C_PNL_NEG  = '#f5576c';
+
+        const fmt = (v: number) => formatCurrency(v, holdings.currency);
+        const pnlPct = (pnl: number, inv: number) =>
+          inv > 0 ? ` (${pnl >= 0 ? '+' : ''}${((pnl / inv) * 100).toFixed(2)}%)` : '';
+
+        const CustomTooltip = ({ active, payload, label }: any) => {
+          if (!active || !payload?.length) return null;
+          const inv = payload.find((p: any) => p.dataKey === 'invested')?.value ?? 0;
+          const cur = payload.find((p: any) => p.dataKey === 'current')?.value  ?? 0;
+          const pnl = payload.find((p: any) => p.dataKey === 'pnl')?.value     ?? 0;
+          return (
+            <Paper sx={{ p: 1.25, minWidth: 200, boxShadow: 4, border: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="subtitle2" fontWeight={700} mb={0.5}>{label}</Typography>
+              {[
+                { label: 'Invested',      value: fmt(inv), color: C_INVESTED },
+                { label: 'Current Value', value: fmt(cur), color: C_CURRENT  },
+              ].map(row => (
+                <Box key={row.label} display="flex" justifyContent="space-between" gap={2} mb={0.2}>
+                  <Typography variant="caption" color="text.secondary">{row.label}</Typography>
+                  <Typography variant="caption" fontWeight={700} color={row.color}>{row.value}</Typography>
+                </Box>
+              ))}
+              <Divider sx={{ my: 0.5 }} />
+              <Box display="flex" justifyContent="space-between" gap={2}>
+                <Typography variant="caption" color="text.secondary">P&amp;L</Typography>
+                <Typography variant="caption" fontWeight={700} color={pnl >= 0 ? 'success.main' : 'error.main'}>
+                  {pnl >= 0 ? '+' : ''}{fmt(pnl)}{pnlPct(pnl, inv)}
+                </Typography>
+              </Box>
+            </Paper>
+          );
+        };
+
+        return (
+          <Paper
+            sx={{
+              mb: 2, px: 3, py: 1.75,
+              background: 'linear-gradient(135deg, #f8f9ff 0%, #fff 100%)',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.07)',
+              border: '1px solid', borderColor: 'grey.200', borderRadius: 2,
+            }}
+          >
+            {/* Label row */}
+            <Box display="flex" alignItems="center" gap={1} mb={1.5}>
+              <AccountBalance sx={{ fontSize: 16, color: '#667eea' }} />
+              <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase" letterSpacing={0.5}>
+                Stocks + ETFs Overview
+              </Typography>
+              <Chip
+                label={`${combinedTotals.stockCount} stocks · ${combinedTotals.etfCount} ETFs`}
+                size="small"
+                variant="outlined"
+                sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600, color: 'text.secondary' }}
+              />
+            </Box>
+
+            {/* Metrics row + chart side-by-side */}
+            <Box display="flex" gap={0} flexWrap="wrap" alignItems="flex-start">
+
+              {/* Left: summary totals */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pr: 3, mr: 3, borderRight: '1px solid', borderColor: 'divider', minWidth: 160 }}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" fontWeight={500}>Amount Invested</Typography>
+                  <Typography variant="h6" fontWeight={700} lineHeight={1.2}>
+                    {fmt(combinedTotals.totalInvested)}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" fontWeight={500}>Current Value</Typography>
+                  <Typography variant="h6" fontWeight={700} lineHeight={1.2}>
+                    {fmt(combinedTotals.totalCurrent)}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" fontWeight={500}>Total P&amp;L</Typography>
+                  <Box display="flex" alignItems="baseline" gap={0.75}>
+                    <Typography variant="h6" fontWeight={700} lineHeight={1.2}
+                      color={combinedTotals.totalPnl >= 0 ? 'success.main' : 'error.main'}>
+                      {combinedTotals.totalPnl >= 0 ? '+' : ''}{fmt(combinedTotals.totalPnl)}
+                    </Typography>
+                    <Chip
+                      label={formatPercentage(combinedTotals.totalPnlPct)}
+                      size="small"
+                      color={combinedTotals.totalPnl >= 0 ? 'success' : 'error'}
+                      sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700 }}
+                    />
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Right: horizontal grouped bar chart */}
+              <Box sx={{ flex: 1, minWidth: 320 }}>
+                <ResponsiveContainer width="100%" height={130}>
+                  <BarChart
+                    data={chartData}
+                    layout="vertical"
+                    margin={{ top: 4, right: 80, left: 8, bottom: 4 }}
+                    barCategoryGap="28%"
+                    barGap={3}
+                  >
+                    <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis
+                      type="number"
+                      tickFormatter={(v: number) => formatCurrency(v, holdings.currency)}
+                      tick={{ display: 'none' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      width={48}
+                      tick={{ fontSize: 12, fontWeight: 600, fill: '#444' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                    <Legend
+                      iconType="circle"
+                      iconSize={8}
+                      wrapperStyle={{ fontSize: 11, paddingTop: 4 }}
+                    />
+
+                    {/* Invested bar */}
+                    <Bar dataKey="invested" name="Invested" fill={C_INVESTED} radius={[0, 3, 3, 0]} barSize={14}>
+                      <LabelList
+                        dataKey="invested"
+                        position="right"
+                        formatter={(v: number) => fmt(v)}
+                        style={{ fontSize: 10, fontWeight: 600, fill: C_INVESTED }}
+                      />
+                    </Bar>
+
+                    {/* Current Value bar */}
+                    <Bar dataKey="current" name="Current" fill={C_CURRENT} radius={[0, 3, 3, 0]} barSize={14}>
+                      <LabelList
+                        dataKey="current"
+                        position="right"
+                        formatter={(v: number) => fmt(v)}
+                        style={{ fontSize: 10, fontWeight: 600, fill: C_CURRENT }}
+                      />
+                    </Bar>
+
+                    {/* P&L bar — per-row colour via Cell */}
+                    <Bar dataKey="pnl" name="P&L" radius={[0, 3, 3, 0]} barSize={14}>
+                      {chartData.map((entry, i) => (
+                        <Cell key={i} fill={entry.pnl >= 0 ? C_PNL_POS : C_PNL_NEG} />
+                      ))}
+                      <LabelList
+                        dataKey="pnl"
+                        position="right"
+                        formatter={(v: number) => `${v >= 0 ? '+' : ''}${fmt(v)}`}
+                        style={{ fontSize: 10, fontWeight: 700, fill: '#555' }}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
+
+            </Box>
+          </Paper>
+        );
+      })()}
 
       {/* ── Tabs ── */}
       <Paper sx={{ mb: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.07)' }}>
