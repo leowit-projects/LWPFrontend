@@ -81,13 +81,13 @@ import {
 
 // ─── Sector target allocations ────────────────────────────────────────────────
 const SECTOR_TARGETS: Record<string, number> = {
-  'Auto Ancillary': 12,
+  'Auto Ancillary': 15,
   Energy: 6,
   Finance: 20,
-  FMCG: 16,
-  Healthcare: 18,
+  FMCG: 15,
+  Healthcare: 17,
   Infrastructure: 2,
-  'Software Services': 16,
+  'Software Services': 15,
   Others: 10,
 };
 const NAMED_SECTORS = Object.keys(SECTOR_TARGETS).filter((s) => s !== 'Others');
