@@ -94,7 +94,7 @@ const NAMED_SECTORS = Object.keys(SECTOR_TARGETS).filter((s) => s !== 'Others');
 const SECTOR_GAP_THRESHOLD_RATIO = 0.1; // 10% of the sector's target allocation
 
 const PIE_COLORS = [
-'#de324c',  '#f4895f',  '#f8e16f',  '#95cf92',  '#369acc',  '#9656a2', '#5bc4bf', '#d8d8d8'
+  '#6f1926',  '#de324c',  '#f4895f',  '#f8e16f',  '#95cf92',  '#369acc',  '#9656a2', '#d8d8d8'
 ];
 
 const PIE_NAMED_SECTORS = [
