@@ -81,28 +81,31 @@ import {
 
 // ─── Sector target allocations ────────────────────────────────────────────────
 const SECTOR_TARGETS: Record<string, number> = {
-  Finance: 18,
-  'Auto Ancillary': 18,
+  'Auto Ancillary': 12,
+  Energy: 6,
+  Finance: 20,
   FMCG: 16,
   Healthcare: 18,
+  Infrastructure: 6,
   'Software Services': 12,
-  Energy: 8,
   Others: 10,
 };
 const NAMED_SECTORS = Object.keys(SECTOR_TARGETS).filter((s) => s !== 'Others');
-const SECTOR_GAP_THRESHOLD = 2;
+const SECTOR_GAP_THRESHOLD_RATIO = 0.1; // 10% of the sector's target allocation
 
 const PIE_COLORS = [
-'#de324c',  '#f4895f',  '#f8e16f',  '#95cf92',  '#369acc',  '#9656a2', '#d8d8d8'
+'#de324c',  '#f4895f',  '#f8e16f',  '#95cf92',  '#369acc',  '#9656a2', '#5bc4bf', '#d8d8d8'
 ];
 
 const PIE_NAMED_SECTORS = [
-  'Finance',
-  'Healthcare',
-  'FMCG',
-  'Software Services',
-  'Energy',
   'Auto Ancillary',
+  'Energy',
+  'Finance',
+  'FMCG',
+  'Healthcare',
+  'Infrastructure',
+  'Software Services',
+  'Others',
 ];
 
 // ─── AI Insights Types ────────────────────────────────────────────────────────
@@ -226,6 +229,7 @@ interface SectorAnalysis {
   actualPct: number;
   targetPct: number;
   gap: number;
+  threshold: number;
   isUnder: boolean;
 }
 
@@ -243,7 +247,8 @@ function buildSectorAnalysis(stocks: Array<{ sector?: string | null; invested_va
     const actualPct = (invested / totalInvested) * 100;
     const targetPct = SECTOR_TARGETS[sector];
     const gap = targetPct - actualPct;
-    return { sector, invested, actualPct, targetPct, gap, isUnder: gap > SECTOR_GAP_THRESHOLD };
+    const threshold = targetPct * SECTOR_GAP_THRESHOLD_RATIO;
+    return { sector, invested, actualPct, targetPct, gap, threshold, isUnder: gap > threshold };
   });
 }
 
@@ -734,7 +739,7 @@ function SectorPieChart({ stocks, currency }: { stocks: Array<{ sector?: string 
       const key = PIE_NAMED_SECTORS.includes(raw) ? raw : 'Others';
       map[key] = (map[key] || 0) + s.invested_value;
     });
-    const named = PIE_NAMED_SECTORS.filter((s) => map[s] !== undefined).map((name) => ({ name, value: map[name] }));
+    const named = PIE_NAMED_SECTORS.filter((s) => s !== 'Others' && map[s] !== undefined).map((name) => ({ name, value: map[name] }));
     const others = map['Others'] ? [{ name: 'Others', value: map['Others'] }] : [];
     return [...named, ...others];
   }, [stocks]);
@@ -867,12 +872,12 @@ function SectorAnalysisPanel({ analysis, currency, totalInvested }: { analysis: 
                 <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.8rem' }}>{a.sector}</Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Chip label={`${a.actualPct.toFixed(1)}%`} size="small" color={a.isUnder ? 'warning' : a.gap < -SECTOR_GAP_THRESHOLD ? 'error' : 'success'} sx={{ height: 18, fontSize: '0.68rem' }} />
+                <Chip label={`${a.actualPct.toFixed(1)}%`} size="small" color={a.isUnder ? 'warning' : a.gap < -a.threshold ? 'error' : 'success'} sx={{ height: 18, fontSize: '0.68rem' }} />
                 <Typography variant="caption" color="text.disabled">/ {a.targetPct}%</Typography>
               </Box>
             </Box>
             <Box sx={{ height: 7, borderRadius: 3, backgroundColor: '#eeeeee', overflow: 'hidden', position: 'relative' }}>
-              <Box sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 3, width: `${Math.min(100, (a.actualPct / (a.targetPct || 1)) * 100)}%`, backgroundColor: a.isUnder ? '#ff9800' : a.gap < -SECTOR_GAP_THRESHOLD ? '#f44336' : '#4caf50', transition: 'width 0.6s ease' }} />
+              <Box sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 3, width: `${Math.min(100, (a.actualPct / (a.targetPct || 1)) * 100)}%`, backgroundColor: a.isUnder ? '#ff9800' : a.gap < -a.threshold ? '#f44336' : '#4caf50', transition: 'width 0.6s ease' }} />
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
               {formatCurrency(a.invested, currency)}
@@ -954,7 +959,7 @@ function StockDetailsTable({ stocks, onDelete }: {
     return ['All', ...Array.from(set).sort()];
   }, [stocks]);
 
-  const filteredByButton = sectorButtonFilter === 'All' ? stocks : sectorButtonFilter === 'Others' ? stocks.filter((s) => !['Finance', 'Auto Ancillary', 'FMCG', 'Healthcare', 'Software Services', 'Energy'].includes(s.sector || '')) : stocks.filter((s) => s.sector === sectorButtonFilter);
+  const filteredByButton = sectorButtonFilter === 'All' ? stocks : sectorButtonFilter === 'Others' ? stocks.filter((s) => !['Auto Ancillary', 'Energy', 'Finance', 'FMCG', 'Healthcare', 'Infrastructure', 'Software Services'].includes(s.sector || '')) : stocks.filter((s) => s.sector === sectorButtonFilter);
   const filteredStocks = sectorFilter === 'All' ? filteredByButton : filteredByButton.filter((s) => (s.sector || 'Unknown') === sectorFilter);
   const sortedStocks = [...filteredStocks].sort((a, b) => {
     if (sortBy === 'symbol') { const cmp = (a.symbol ?? '').localeCompare(b.symbol ?? ''); return sortDir === 'asc' ? cmp : -cmp; }
@@ -991,7 +996,7 @@ function StockDetailsTable({ stocks, onDelete }: {
       </Box>
       <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', bgcolor: '#fafafa' }}>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {['All', 'Finance', 'Auto Ancillary', 'FMCG', 'Healthcare', 'Software Services', 'Energy', 'Others'].map((sec) => (
+          {['All', 'Auto Ancillary', 'Energy', 'Finance', 'FMCG', 'Healthcare', 'Infrastructure', 'Software Services', 'Others'].map((sec) => (
             <Button key={sec} variant={sectorButtonFilter === sec ? 'contained' : 'outlined'} size="small" onClick={() => setSectorButtonFilter(sec)} sx={{ fontSize: '0.72rem', py: 0.4, px: 1.5, textTransform: 'none', fontWeight: sectorButtonFilter === sec ? 700 : 500, ...(sectorButtonFilter === sec ? { bgcolor: '#1976d2', color: 'white', '&:hover': { bgcolor: '#1565c0' } } : { borderColor: '#ddd', color: 'text.secondary', '&:hover': { borderColor: '#bbb', bgcolor: '#f5f5f5' } }) }}>
               {sec}
             </Button>
