@@ -91,11 +91,19 @@ const SECTOR_TARGETS: Record<string, number> = {
   Others: 10,
 };
 const NAMED_SECTORS = Object.keys(SECTOR_TARGETS).filter((s) => s !== 'Others');
-const SECTOR_GAP_THRESHOLD_RATIO = 0.1; // 10% of the sector's target allocation
+const SECTOR_GAP_THRESHOLD_RATIO = 0.15;
 
-const PIE_COLORS = [
-  '#6f1926',  '#de324c',  '#f4895f',  '#f8e16f',  '#95cf92',  '#369acc',  '#9656a2', '#d8d8d8'
-];
+const SECTOR_COLORS: Record<string, string> = {
+  'Auto Ancillary':    '#f46d43',  // Orange  — mechanical/industrial
+  'Energy':            '#3288bd',  // Blue    — power & electric
+  'Finance':           '#66c2a5',  // Green   — money
+  'FMCG':              '#fee08b',  // Yellow  — consumer/sunny
+  'Healthcare':        '#d53e4f',  // Red     — medical cross
+  'Infrastructure':    '#5c53a5',  // Brown   — concrete & steel
+  'Software Services': '#abdda4',  // Indigo  — tech/digital
+  'Others':            '#90a4ae',  // Grey    — neutral
+};
+const PIE_COLORS = Object.values(SECTOR_COLORS);
 
 const PIE_NAMED_SECTORS = [
   'Auto Ancillary',
@@ -762,7 +770,7 @@ function SectorPieChart({ stocks, currency }: { stocks: Array<{ sector?: string 
       <ResponsiveContainer width="100%" height={400}>
         <PieChart>
           <Pie data={data} cx="50%" cy="50%" outerRadius={150} dataKey="value" labelLine={false} label={renderLabel}>
-            {data.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+            {data.map((entry, i) => <Cell key={i} fill={SECTOR_COLORS[entry.name] ?? PIE_COLORS[i % PIE_COLORS.length]} />)}
           </Pie>
           <RechartsTooltip formatter={(val: number, name: string) => [`${formatCurrency(val, currency)} (${((val / total) * 100).toFixed(1)}%)`, name]} />
           <Legend iconType="circle" iconSize={9} formatter={(value, entry: any) => <span style={{ fontSize: 11, color: '#555' }}>{value} — {formatCurrency(entry.payload.value, currency)}</span>} />
@@ -783,7 +791,7 @@ function SectorPnLChart({ stocks, currency }: { stocks: Array<{ sector?: string 
       map[key].current += s.current_value;
       map[key].pnl += s.profit_loss;
     });
-    const named = PIE_NAMED_SECTORS.filter((s) => map[s]).map((name) => ({
+    const named = PIE_NAMED_SECTORS.filter((s) => s !== 'Others' && map[s]).map((name) => ({
       name, invested: round2(map[name].invested), current: round2(map[name].current), pnl: round2(map[name].pnl),
       pnlPct: map[name].invested > 0 ? parseFloat(((map[name].pnl / map[name].invested) * 100).toFixed(2)) : 0,
     }));
@@ -959,7 +967,7 @@ function StockDetailsTable({ stocks, onDelete }: {
     return ['All', ...Array.from(set).sort()];
   }, [stocks]);
 
-  const filteredByButton = sectorButtonFilter === 'All' ? stocks : sectorButtonFilter === 'Others' ? stocks.filter((s) => !['Auto Ancillary', 'Energy', 'Finance', 'FMCG', 'Healthcare', 'Infrastructure', 'Software Services'].includes(s.sector || '')) : stocks.filter((s) => s.sector === sectorButtonFilter);
+  const filteredByButton = sectorButtonFilter === 'All' ? stocks : sectorButtonFilter === 'Others' ? stocks.filter((s) => !['Finance', 'Auto Ancillary', 'FMCG', 'Healthcare', 'Software Services', 'Energy', 'Infrastructure'].includes(s.sector || '')) : stocks.filter((s) => s.sector === sectorButtonFilter);
   const filteredStocks = sectorFilter === 'All' ? filteredByButton : filteredByButton.filter((s) => (s.sector || 'Unknown') === sectorFilter);
   const sortedStocks = [...filteredStocks].sort((a, b) => {
     if (sortBy === 'symbol') { const cmp = (a.symbol ?? '').localeCompare(b.symbol ?? ''); return sortDir === 'asc' ? cmp : -cmp; }
@@ -996,7 +1004,7 @@ function StockDetailsTable({ stocks, onDelete }: {
       </Box>
       <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', bgcolor: '#fafafa' }}>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {['All', 'Auto Ancillary', 'Energy', 'Finance', 'FMCG', 'Healthcare', 'Infrastructure', 'Software Services', 'Others'].map((sec) => (
+          {['All', 'Finance', 'Auto Ancillary', 'FMCG', 'Healthcare', 'Software Services', 'Energy', 'Infrastructure', 'Others'].map((sec) => (
             <Button key={sec} variant={sectorButtonFilter === sec ? 'contained' : 'outlined'} size="small" onClick={() => setSectorButtonFilter(sec)} sx={{ fontSize: '0.72rem', py: 0.4, px: 1.5, textTransform: 'none', fontWeight: sectorButtonFilter === sec ? 700 : 500, ...(sectorButtonFilter === sec ? { bgcolor: '#1976d2', color: 'white', '&:hover': { bgcolor: '#1565c0' } } : { borderColor: '#ddd', color: 'text.secondary', '&:hover': { borderColor: '#bbb', bgcolor: '#f5f5f5' } }) }}>
               {sec}
             </Button>
