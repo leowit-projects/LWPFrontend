@@ -86,8 +86,8 @@ const SECTOR_TARGETS: Record<string, number> = {
   Finance: 20,
   FMCG: 16,
   Healthcare: 18,
-  Infrastructure: 6,
-  'Software Services': 12,
+  Infrastructure: 2,
+  'Software Services': 16,
   Others: 10,
 };
 const NAMED_SECTORS = Object.keys(SECTOR_TARGETS).filter((s) => s !== 'Others');
