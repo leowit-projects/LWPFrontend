@@ -34,6 +34,7 @@ import {
     HoldingAccountUpdate,
     HoldingUploadResponse,
     HoldingAccountsResponse,
+    AIInsightsResponse,
     TimeRange,
     AssetTypeParam,
     PriceHistoryData,
@@ -344,6 +345,16 @@ export const holdingAccountsAPI = {
             }
         );
     },
+    getAiInsights: (
+        accountId: string,
+        portfolioData: Record<string, unknown>,
+        forceRefresh: boolean = false
+    ): Promise<AxiosResponse<AIInsightsResponse>> =>
+        api.post<AIInsightsResponse>(
+            `/api/holding-accounts/${accountId}/ai-insights`,
+            portfolioData,
+            { params: { force_refresh: forceRefresh } }
+        ),
 };
 
 // Historical Charts API

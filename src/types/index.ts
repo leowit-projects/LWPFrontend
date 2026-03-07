@@ -571,3 +571,39 @@ export interface HoldingAccountsResponse {
     recommendations: HoldingRecommendation[];           // active recommendations
     recommendations_summary: RecommendationsSummary;
 }
+
+export interface PhilosophyScore {
+    name: string;
+    score: number;
+    note: string;
+}
+
+export interface InsightFlag {
+    ticker: string;
+    flag_type: 'RED' | 'YELLOW' | 'GREEN';
+    message: string;
+    action: string;
+}
+
+export interface SectorInsight {
+    sector: string;
+    commentary: string;
+    status: 'STRONG' | 'NEUTRAL' | 'WEAK';
+}
+
+export interface ActionItem {
+    action: 'BUY' | 'HOLD' | 'EXIT' | 'TRIM' | 'REVIEW';
+    tickers: string[];
+    reason: string;
+    priority: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
+export interface AIInsightsResponse {
+    overall_health_score: number;
+    overall_summary: string;
+    philosophy_scores: PhilosophyScore[];
+    key_flags: InsightFlag[];
+    sector_insights: SectorInsight[];
+    action_items: ActionItem[];
+    generated_at: string;
+}
