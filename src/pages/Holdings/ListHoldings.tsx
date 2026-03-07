@@ -87,7 +87,7 @@ const SECTOR_TARGETS: Record<string, number> = {
   FMCG: 15,
   Healthcare: 17,
   Infrastructure: 2,
-  'Software Services': 15,
+  'Technology': 15,
   Others: 10,
 };
 const NAMED_SECTORS = Object.keys(SECTOR_TARGETS).filter((s) => s !== 'Others');
@@ -100,7 +100,7 @@ const SECTOR_COLORS: Record<string, string> = {
   'FMCG':              '#fee08b',  // Yellow  — consumer/sunny
   'Healthcare':        '#d53e4f',  // Red     — medical cross
   'Infrastructure':    '#5c53a5',  // Brown   — concrete & steel
-  'Software Services': '#abdda4',  // Indigo  — tech/digital
+  'Technology': '#abdda4',  // Indigo  — tech/digital
   'Others':            '#90a4ae',  // Grey    — neutral
 };
 const PIE_COLORS = Object.values(SECTOR_COLORS);
@@ -112,7 +112,7 @@ const PIE_NAMED_SECTORS = [
   'FMCG',
   'Healthcare',
   'Infrastructure',
-  'Software Services',
+  'Technology',
   'Others',
 ];
 
@@ -967,7 +967,7 @@ function StockDetailsTable({ stocks, onDelete }: {
     return ['All', ...Array.from(set).sort()];
   }, [stocks]);
 
-  const filteredByButton = sectorButtonFilter === 'All' ? stocks : sectorButtonFilter === 'Others' ? stocks.filter((s) => !['Finance', 'Auto Ancillary', 'FMCG', 'Healthcare', 'Software Services', 'Energy', 'Infrastructure'].includes(s.sector || '')) : stocks.filter((s) => s.sector === sectorButtonFilter);
+  const filteredByButton = sectorButtonFilter === 'All' ? stocks : sectorButtonFilter === 'Others' ? stocks.filter((s) => !['Finance', 'Auto Ancillary', 'FMCG', 'Healthcare', 'Technology', 'Energy', 'Infrastructure'].includes(s.sector || '')) : stocks.filter((s) => s.sector === sectorButtonFilter);
   const filteredStocks = sectorFilter === 'All' ? filteredByButton : filteredByButton.filter((s) => (s.sector || 'Unknown') === sectorFilter);
   const sortedStocks = [...filteredStocks].sort((a, b) => {
     if (sortBy === 'symbol') { const cmp = (a.symbol ?? '').localeCompare(b.symbol ?? ''); return sortDir === 'asc' ? cmp : -cmp; }
@@ -1004,7 +1004,7 @@ function StockDetailsTable({ stocks, onDelete }: {
       </Box>
       <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', bgcolor: '#fafafa' }}>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {['All', 'Finance', 'Auto Ancillary', 'FMCG', 'Healthcare', 'Software Services', 'Energy', 'Infrastructure', 'Others'].map((sec) => (
+          {['All', 'Finance', 'Auto Ancillary', 'FMCG', 'Healthcare', 'Technology', 'Energy', 'Infrastructure', 'Others'].map((sec) => (
             <Button key={sec} variant={sectorButtonFilter === sec ? 'contained' : 'outlined'} size="small" onClick={() => setSectorButtonFilter(sec)} sx={{ fontSize: '0.72rem', py: 0.4, px: 1.5, textTransform: 'none', fontWeight: sectorButtonFilter === sec ? 700 : 500, ...(sectorButtonFilter === sec ? { bgcolor: '#1976d2', color: 'white', '&:hover': { bgcolor: '#1565c0' } } : { borderColor: '#ddd', color: 'text.secondary', '&:hover': { borderColor: '#bbb', bgcolor: '#f5f5f5' } }) }}>
               {sec}
             </Button>

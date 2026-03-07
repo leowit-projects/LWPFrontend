@@ -154,7 +154,7 @@ const ListStocks: React.FC = () => {
     if (sectorButtonFilter !== 'All') {
       if (sectorButtonFilter === 'Others') {
         result = result.filter(stock => 
-          !['Auto Ancillary', 'Energy', 'Finance', 'FMCG', 'Healthcare', 'Infrastructure', 'Software Services'].includes(
+          !['Auto Ancillary', 'Energy', 'Finance', 'FMCG', 'Healthcare', 'Infrastructure', 'Technology'].includes(
             stock.sector_industry?.split(' - ')[0] || ''
           )
         );
@@ -736,7 +736,7 @@ const ListStocks: React.FC = () => {
       {/* Sector Button Group Filter */}
       <Box sx={{ mb: 2 }}>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {['All', 'Auto Ancillary', 'Energy', 'Finance', 'FMCG', 'Healthcare', 'Infrastructure', 'Software Services', 'Others'].map((sec) => (
+          {['All', 'Auto Ancillary', 'Energy', 'Finance', 'FMCG', 'Healthcare', 'Infrastructure', 'Technology', 'Others'].map((sec) => (
             <Button
               key={sec}
               variant={sectorButtonFilter === sec ? 'contained' : 'outlined'}

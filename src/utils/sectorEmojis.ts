@@ -10,7 +10,7 @@ export const SECTOR_EMOJI_MAP: Record<string, string> = {
     'consumer durables': '🏠',
     'electrical equipment': '⚡',
     'ferrous metals': '🔩',
-    'software services': '💻',
+    'Technology': '💻',
     'leisure services': '🎭',
     'minerals & mining': '⛏️',
     'non - ferrous metals': '🥈',
