@@ -137,6 +137,11 @@ interface SectorInsight {
   status: 'STRONG' | 'NEUTRAL' | 'WEAK';
 }
 
+interface HedgingIdea {
+  sector: string;
+  idea: string;
+}
+
 interface ActionItem {
   action: 'BUY' | 'HOLD' | 'EXIT' | 'TRIM' | 'REVIEW';
   tickers: string[];
@@ -150,6 +155,7 @@ interface AIInsightsResponse {
   philosophy_scores: PhilosophyScore[];
   key_flags: InsightFlag[];
   sector_insights: SectorInsight[];
+  hedging_ideas: HedgingIdea[];
   action_items: ActionItem[];
   generated_at: string;
 }
@@ -682,6 +688,34 @@ function AIInsightsTab({
                     </Box>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.73rem', lineHeight: 1.5 }}>
                       {si.commentary}
+                    </Typography>
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          </Paper>
+
+          {/* Row 4: Hedging ideas */}
+          <Paper sx={{ p: 2.5, mt: 2.5, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+              <Timeline sx={{ fontSize: 18, color: '#5c53a5' }} /> Hedging Ideas
+            </Typography>
+            <Grid container spacing={1.5}>
+              {insights.hedging_ideas.map((hi) => (
+                <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={hi.sector}>
+                  <Box
+                    sx={{
+                      p: 1.5, borderRadius: 1.5, height: '100%',
+                      border: '1px solid #eee', bgcolor: '#fafafa',
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
+                      <Typography variant="body2" fontWeight={700} sx={{ fontSize: '0.82rem' }}>
+                        {hi.sector}
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.73rem', lineHeight: 1.5 }}>
+                      {hi.idea}
                     </Typography>
                   </Box>
                 </Grid>
