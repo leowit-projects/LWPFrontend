@@ -77,17 +77,18 @@ import {
   HoldingRecommendation,
   BondHoldingDetail,
   MutualFundHoldingDetail,
+  AIInsightsResponse,
 } from '../../types';
 
 // ─── Sector target allocations ────────────────────────────────────────────────
 const SECTOR_TARGETS: Record<string, number> = {
-  'Auto Ancillary': 15,
-  Energy: 6,
-  Finance: 20,
-  FMCG: 15,
-  Healthcare: 17,
-  Infrastructure: 2,
-  'Technology': 15,
+  'Auto Ancillary': 18,
+  Energy: 5,
+  Finance: 18,
+  FMCG: 16,
+  Healthcare: 16,
+  Infrastructure: 3,
+  'Technology': 14,
   Others: 10,
 };
 const NAMED_SECTORS = Object.keys(SECTOR_TARGETS).filter((s) => s !== 'Others');
@@ -118,12 +119,6 @@ const PIE_NAMED_SECTORS = [
 
 // ─── AI Insights Types ────────────────────────────────────────────────────────
 
-interface PhilosophyScore {
-  name: string;
-  score: number;
-  note: string;
-}
-
 interface InsightFlag {
   ticker: string;
   flag_type: 'RED' | 'YELLOW' | 'GREEN';
@@ -137,27 +132,11 @@ interface SectorInsight {
   status: 'STRONG' | 'NEUTRAL' | 'WEAK';
 }
 
-interface HedgingIdea {
-  sector: string;
-  idea: string;
-}
-
 interface ActionItem {
   action: 'BUY' | 'HOLD' | 'EXIT' | 'TRIM' | 'REVIEW';
   tickers: string[];
   reason: string;
   priority: 'HIGH' | 'MEDIUM' | 'LOW';
-}
-
-interface AIInsightsResponse {
-  overall_health_score: number;
-  overall_summary: string;
-  philosophy_scores: PhilosophyScore[];
-  key_flags: InsightFlag[];
-  sector_insights: SectorInsight[];
-  hedging_ideas: HedgingIdea[];
-  action_items: ActionItem[];
-  generated_at: string;
 }
 
 // ─── 52W Range & MA helpers ──────────────────────────────────────────────────
@@ -326,7 +305,7 @@ function AIInsightsTab({
       
       const forceRefresh = !!insights; // Regenerate button = force refresh
       const response = await holdingAccountsAPI.getAiInsights(accountId, portfolioPayload, forceRefresh);
-      setInsights(response.data);
+      setInsights({ ...response.data, hedging_ideas: response.data.hedging_ideas || [] }); // Ensure hedging ideas is always defined
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message || 'Failed to generate AI insights');
     } finally {
@@ -701,7 +680,7 @@ function AIInsightsTab({
               <Timeline sx={{ fontSize: 18, color: '#5c53a5' }} /> Hedging Ideas
             </Typography>
             <Grid container spacing={1.5}>
-              {insights.hedging_ideas.map((hi) => (
+              {(insights.hedging_ideas ?? []).map((hi) => (
                 <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={hi.sector}>
                   <Box
                     sx={{
@@ -979,16 +958,16 @@ function StockRecommendationsTable({ recommendations, underSectors, stockSectorM
 }
 
 function StockDetailsTable({ stocks, onDelete }: {
-  stocks: Array<{ id: number; symbol: string; name?: string | null; sector?: string | null; quantity: number; average_price: number; last_close_price?: number | null; price_52w_low?: number | null; price_52w_high?: number | null; moving_average_20?: number | null; moving_average_200?: number | null; invested_value: number; current_value: number; profit_loss: number; profit_loss_percentage: number; currency: string; updated_at: string; }>;
+  stocks: Array<{ id: number; symbol: string; name?: string | null; sector?: string | null; quantity: number; average_price: number; last_close_price?: number | null; price_52w_low?: number | null; price_52w_high?: number | null; moving_average_20?: number | null; moving_average_200?: number | null; invested_value: number; current_value: number; profit_loss: number; profit_loss_percentage: number; currency: string; updated_at: string; pe_ratio?: number | null; rsi_index?: number | null; }>;
   currency: string;
   onDelete: (id: number, name: string) => void;
 }) {
-  type SortKey = 'symbol' | 'invested_value' | 'current_value' | 'profit_loss' | 'profit_loss_percentage' | 'quantity' | 'average_price';
+  type SortKey = 'symbol' | 'invested_value' | 'current_value' | 'profit_loss' | 'profit_loss_percentage' | 'quantity' | 'average_price' | '52w_position' | 'pe_ratio';
   const [sortBy, setSortBy] = useState<SortKey>('invested_value');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [sectorFilter, setSectorFilter] = useState<string>('All');
   const [sectorButtonFilter, setSectorButtonFilter] = useState<string>('All');
-  const [selectedStocks, setSelectedStocks] = useState<string[]>([]);
+  const [selectedStocks, setSelectedStocks] = useState<string[]>([]); 
 
   const handleSort = (col: SortKey) => {
     if (sortBy === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -1005,12 +984,22 @@ function StockDetailsTable({ stocks, onDelete }: {
   const filteredStocks = sectorFilter === 'All' ? filteredByButton : filteredByButton.filter((s) => (s.sector || 'Unknown') === sectorFilter);
   const sortedStocks = [...filteredStocks].sort((a, b) => {
     if (sortBy === 'symbol') { const cmp = (a.symbol ?? '').localeCompare(b.symbol ?? ''); return sortDir === 'asc' ? cmp : -cmp; }
+    if (sortBy === '52w_position') {
+      const posA = calculate52WeekPosition(a.last_close_price ?? null, a.price_52w_low ?? null, a.price_52w_high ?? null);
+      const posB = calculate52WeekPosition(b.last_close_price ?? null, b.price_52w_low ?? null, b.price_52w_high ?? null);
+      return sortDir === 'asc' ? posA - posB : posB - posA;
+    }
+    if (sortBy === 'pe_ratio') {
+      const peA = a.pe_ratio ?? 0;
+      const peB = b.pe_ratio ?? 0;
+      return sortDir === 'asc' ? peA - peB : peB - peA;
+    }
     return sortDir === 'asc' ? a[sortBy] - b[sortBy] : b[sortBy] - a[sortBy];
   });
 
   const handleGetSymbols = () => {
     const selectedStockData = stocks.filter(stock => selectedStocks.includes(stock.symbol)).map(stock => ({ symbol: stock.symbol, price: stock.last_close_price ? Math.round(stock.last_close_price) : 0 })).sort((a, b) => a.symbol.localeCompare(b.symbol));
-    const formattedOutput = selectedStockData.map(stock => `${stock.symbol} - ${stock.price}`).join('\n');
+    const formattedOutput = selectedStockData.map(s => `${s.symbol} @ ₹${s.price}`).join('\n');
     navigator.clipboard.writeText(formattedOutput).then(() => { alert(`Selected Symbols (${selectedStockData.length}):\n\n${formattedOutput}\n\nCopied to clipboard!`); }).catch(err => { console.error('Failed to copy to clipboard:', err); alert(`Selected Symbols (${selectedStockData.length}):\n\n${formattedOutput}`); });
   };
 
@@ -1054,7 +1043,8 @@ function StockDetailsTable({ stocks, onDelete }: {
               </TableCell>
               <TableCell>{sortHeader('symbol', 'Symbol')}</TableCell>
               <TableCell><Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase">Sector</Typography></TableCell>
-              <TableCell align="center"><Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase">Last Close / 52W Range</Typography></TableCell>
+              <TableCell align="center">{sortHeader('52w_position', 'Last Close / 52W Range')}</TableCell>
+              <TableCell align="center">{sortHeader('pe_ratio', 'P/E')}</TableCell>
               <TableCell align="right">{sortHeader('quantity', 'Qty')}</TableCell>
               <TableCell align="right">{sortHeader('average_price', 'Avg. Price')}</TableCell>
               <TableCell align="right">{sortHeader('invested_value', 'Invested')}</TableCell>
@@ -1093,6 +1083,7 @@ function StockDetailsTable({ stocks, onDelete }: {
                     <Typography variant="caption" color="text.secondary">No data</Typography>
                   )}
                 </TableCell>
+                <TableCell align="right"><Typography variant="body2">{s.pe_ratio}</Typography></TableCell>
                 <TableCell align="right"><Typography variant="body2">{s.quantity.toLocaleString()}</Typography></TableCell>
                 <TableCell align="right">
                   {s.average_price ? (
@@ -1275,6 +1266,7 @@ const ListHoldings: React.FC = () => {
     setError('');
     try {
       const response = await holdingAccountsAPI.getHoldings(accountId!);
+      console.log('Holdings response:', response.data);
       setHoldings(response.data);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load holdings');

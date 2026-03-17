@@ -420,6 +420,7 @@ export interface HoldingDetail {
     price_52w_high?: number | null;
     moving_average_20?: number | null;
     moving_average_200?: number | null;
+    pe_ratio?: number | null;
     current_value: number;
     profit_loss: number;
     profit_loss_percentage: number;
@@ -598,6 +599,11 @@ export interface ActionItem {
     priority: 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
+export interface HedgingIdea {
+    sector: string;
+    idea: string;
+}
+
 export interface AIInsightsResponse {
     overall_health_score: number;
     overall_summary: string;
@@ -606,4 +612,5 @@ export interface AIInsightsResponse {
     sector_insights: SectorInsight[];
     action_items: ActionItem[];
     generated_at: string;
+    hedging_ideas?: HedgingIdea[];  // Optional field for hedging ideas
 }
