@@ -130,6 +130,9 @@ export const stockAPI = {
     updatePurchaseEligibility: (symbol: string, is_purchase_eligible: boolean): Promise<AxiosResponse<StockSymbol>> =>
         api.patch<StockSymbol>(`/api/stocks/${symbol}/purchase-eligibility`, { is_purchase_eligible }),
 
+    updatePurchaseQuantity: (symbol: string, purchase_quantity: number): Promise<AxiosResponse<StockSymbol>> =>
+        api.patch<StockSymbol>(`/api/stocks/${symbol}/purchase-quantity`, { purchase_quantity }),
+
     delete: (symbol: string): Promise<AxiosResponse<{ message: string }>> =>
         api.delete(`/api/stocks/${symbol}`),
 };

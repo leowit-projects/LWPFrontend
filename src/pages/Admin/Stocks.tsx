@@ -161,6 +161,7 @@ const Stocks: React.FC = () => {
       exchange: stock.exchange || '',
       industry_id: industryId,
       is_purchase_eligible: stock.is_purchase_eligible ?? true,
+      purchasepurchase_quantity: stock.purchase_quantity ?? 0,
     });
     setOpenDialog(true);
   };
@@ -188,11 +189,17 @@ const Stocks: React.FC = () => {
         if (formData.is_purchase_eligible !== selectedStock.is_purchase_eligible) {
           await stockAPI.updatePurchaseEligibility(selectedStock.symbol, formData.is_purchase_eligible);
         }
+        if (formData.purchase_quantity !== selectedStock.purchase_quantity) {
+          await stockAPI.updatePurchaseQuantity(selectedStock.symbol, formData.purchase_quantity ?? 0);
+        }
       } else {
         await stockAPI.create(trimmedData);
         // Sync purchase eligibility separately since it uses its own endpoint
         if (formData.is_purchase_eligible !== undefined) {
           await stockAPI.updatePurchaseEligibility(trimmedData.symbol, formData.is_purchase_eligible);
+        }
+        if (formData.purchase_quantity !== undefined) {
+          await stockAPI.updatePurchaseQuantity(trimmedData.symbol, formData.purchase_quantity ?? 0);
         }
       }
       handleCloseDialog();
@@ -229,6 +236,16 @@ const Stocks: React.FC = () => {
     }
   };
 
+  const handleUpdatePurchaseQuantity = async (symbol: string, quantity: number): Promise<void> => {
+    if (isNaN(quantity) || quantity < 0) return;
+    try {
+      await stockAPI.updatePurchaseQuantity(symbol, quantity);
+      loadData();
+    } catch (error: any) {
+      console.error('Failed to update purchase quantity:', error);
+      alert(error.response?.data?.detail || 'Failed to update purchase quantity');
+    }
+  };
   
   // Helper function to calculate days difference
   const getDaysAgo = (date: string | null): string => {
@@ -289,6 +306,26 @@ const Stocks: React.FC = () => {
             sx={{ cursor: 'pointer' }}
           />
         </Tooltip>
+      ),
+    },
+    {
+      field: 'purchase_quantity',
+      headerName: 'Purchase Qty',
+      width: 120,
+      renderCell: (params: GridRenderCellParams) => (
+        <TextField
+          type="number"
+          size="small"
+          defaultValue={params.value ?? 0}
+          onBlur={(e) => {
+            const newVal = parseInt(e.target.value, 10);
+            if (newVal !== params.value) {
+              handleUpdatePurchaseQuantity(params.row.symbol, newVal);
+            }
+          }}
+          inputProps={{ min: 0, style: { width: 60, textAlign: 'center' } }}
+          variant="standard"
+        />
       ),
     },
     { field: 'sector_industry', headerName: 'Industry', width: 300 },
@@ -556,6 +593,16 @@ const Stocks: React.FC = () => {
                 <MenuItem value="false">No — Exclude from portfolio</MenuItem>
               </Select>
             </FormControl>
+            <TextField
+              label="Purchase Quantity"
+              type="number"
+              value={formData.purchase_quantity ?? 0}
+              onChange={(e) => setFormData({ ...formData, purchase_quantity: parseInt(e.target.value, 10) || 0 })}
+              fullWidth
+              sx={{ mb: 2 }}
+              inputProps={{ min: 0 }}
+              helperText="Number of units to purchase"
+            />
           </Box>
         </DialogContent>
         <DialogActions>

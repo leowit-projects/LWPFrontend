@@ -78,6 +78,7 @@ export interface StockSymbol {
     sector_industry?: string;
     is_active: boolean;
     is_purchase_eligible: boolean;
+    purchase_quantity?: number;
     price_last_close?: number;
     price_52w_low?: number;
     price_52w_high?: number;
