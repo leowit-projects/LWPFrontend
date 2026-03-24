@@ -973,7 +973,21 @@ function StockRecommendationsTable({ recommendations, underSectors, stockSectorM
         </Box>
       </Box>
       <Box sx={{ height: Math.min(480, 56 + filtered.length * 56 + 60) }}>
-        <DataGrid rows={filtered} columns={columns} initialState={{ pagination: { paginationModel: { pageSize: 10 } } }} pageSizeOptions={[10, 25, 50]} disableRowSelectionOnClick rowHeight={56} getRowClassName={(params) => isUnderInvested(params.row.stock_symbol) ? 'priority-row' : ''} sx={{ border: 'none', '& .priority-row': { bgcolor: '#fff8e1', '&:hover': { bgcolor: '#ffecb3' } }, '& .MuiDataGrid-columnHeaders': { bgcolor: '#f8f9ff' } }} />
+        <DataGrid rows={filtered} 
+                  columns={columns} 
+                  initialState={
+                    { 
+                      pagination: { 
+                        paginationModel: { pageSize: 10 } 
+                      },
+                      sorting: {
+                        sortModel: [{ field: 'rank', sort: 'asc' }],
+                      },
+                    }
+                  } 
+                  pageSizeOptions={[10, 25, 50]} 
+                  disableRowSelectionOnClick rowHeight={56} 
+                  getRowClassName={(params) => isUnderInvested(params.row.stock_symbol) ? 'priority-row' : ''} sx={{ border: 'none', '& .priority-row': { bgcolor: '#fff8e1', '&:hover': { bgcolor: '#ffecb3' } }, '& .MuiDataGrid-columnHeaders': { bgcolor: '#f8f9ff' } }} />
       </Box>
     </Paper>
   );
