@@ -306,6 +306,7 @@ function AIInsightsTab({
       const forceRefresh = !!insights; // Regenerate button = force refresh
       const response = await holdingAccountsAPI.getAiInsights(accountId, portfolioPayload, forceRefresh);
       setInsights({ ...response.data, hedging_ideas: response.data.hedging_ideas || [] }); // Ensure hedging ideas is always defined
+      console.log('AI Insights response:', response.data);
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message || 'Failed to generate AI insights');
     } finally {
@@ -921,6 +922,27 @@ function StockRecommendationsTable({ recommendations, underSectors, stockSectorM
     return isNamed ? underSectors.includes(sec) : underSectors.includes('Others');
   };
   const columns: GridColDef[] = [
+    {
+      field: 'rank',
+      headerName: '#',
+      width: 60,
+      type: 'number',
+      renderCell: (p: GridRenderCellParams) => {
+        const rank = p.value as number | null;
+        if (rank == null) return null;
+        const medalColor = rank === 1 ? '#f5a623' : rank === 2 ? '#9e9e9e' : rank === 3 ? '#cd7f32' : '#667eea';
+        const medalBg   = rank === 1 ? '#fff8e1' : rank === 2 ? '#f5f5f5' : rank === 3 ? '#fbe9e7' : '#f0f4ff';
+        return (
+          <Tooltip title={`Rank #${rank} — most crashed stocks first`}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+              <Box sx={{ width: 26, height: 26, borderRadius: '50%', bgcolor: medalBg, border: `2px solid ${medalColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography variant="caption" fontWeight={800} sx={{ color: medalColor, fontSize: '0.7rem', lineHeight: 1 }}>{rank}</Typography>
+              </Box>
+            </Box>
+          </Tooltip>
+        );
+      },
+    },
     { field: '_priority', headerName: '', width: 44, sortable: false, renderCell: (p: GridRenderCellParams) => isUnderInvested(p.row.stock_symbol) ? (<Tooltip title={`${stockSectorMap[p.row.stock_symbol] || 'Others'} sector is below target — priority buy`}><Star sx={{ color: '#f5a623', fontSize: 18 }} /></Tooltip>) : null },
     { field: 'stock_symbol', headerName: 'Symbol', width: 140, renderCell: (p: GridRenderCellParams) => { const priority = isUnderInvested(p.row.stock_symbol); return (<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: '100%' }}><Typography variant="body2" fontWeight={700}>{p.value as string}</Typography>{priority && (<Chip label="▲" size="small" sx={{ height: 17, fontSize: '0.62rem', bgcolor: '#fff3e0', color: '#e65100', border: '1px solid #ffcc80' }} />)}</Box>); } },
     { field: 'recommendation_type', headerName: 'Action', width: 100, renderCell: (p: GridRenderCellParams) => { const map: Record<string, { bg: string; fg: string }> = { BUY: { bg: '#e8f5e9', fg: '#2e7d32' }, SELL: { bg: '#ffebee', fg: '#c62828' }, HOLD: { bg: '#fff8e1', fg: '#f57f17' } }; const c = map[p.value as string] || { bg: '#f5f5f5', fg: '#555' }; return <Chip label={p.value as string} size="small" sx={{ bgcolor: c.bg, color: c.fg, fontWeight: 700, minWidth: 52 }} />; } },
