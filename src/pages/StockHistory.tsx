@@ -30,11 +30,11 @@ import {
 
 // ── Shareholding colours (consistent with Scheduler card chips) ───────────────
 const SHAREHOLDING_COLORS: Record<ShareholdingType, string> = {
-  [ShareholdingType.PROMOTERS]: '#2e7d32',
-  [ShareholdingType.FIIs]:      '#0288d1',
-  [ShareholdingType.DIIs]:      '#1565c0',
-  [ShareholdingType.GOVT]:      '#616161',
-  [ShareholdingType.PUBLIC]:    '#e65100',
+  [ShareholdingType.PROMOTERS]: '#9b5de5',
+  [ShareholdingType.FIIs]:      '#f15bb5',
+  [ShareholdingType.DIIs]:      '#fee440',
+  [ShareholdingType.GOVT]:      '#00bbf9',
+  [ShareholdingType.PUBLIC]:    '#00f5d4',
 };
 
 const HOLDING_TYPES_ORDER: ShareholdingType[] = [
@@ -43,6 +43,11 @@ const HOLDING_TYPES_ORDER: ShareholdingType[] = [
   ShareholdingType.DIIs,
   ShareholdingType.GOVT,
   ShareholdingType.PUBLIC,
+];
+
+const HOLDING_TYPES_ORDER_INIT: ShareholdingType[] = [
+  ShareholdingType.FIIs,
+  ShareholdingType.DIIs,
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -65,8 +70,9 @@ const StockHistory: React.FC = () => {
   const [shareholding, setShareholding] = useState<ShareholdingPatternResponse | null>(null);
 
   // Which holding-type lines are currently shown in the chart
+
   const [visibleTypes, setVisibleTypes] = useState<Set<ShareholdingType>>(
-    new Set(HOLDING_TYPES_ORDER)
+    new Set(HOLDING_TYPES_ORDER_INIT)
   );
 
   // ── Load price data whenever symbol or time-range changes ──────────────────
