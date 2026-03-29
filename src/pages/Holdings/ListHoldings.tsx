@@ -33,6 +33,7 @@ import {
   Checkbox,
   Button,
   CircularProgress,
+  Snackbar,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -55,7 +56,7 @@ import {
   Cancel,
   FiberManualRecord,
 } from '@mui/icons-material';
-import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridRenderCellParams, GridRowSelectionModel } from '@mui/x-data-grid';
 import {
   PieChart,
   Pie,
@@ -915,17 +916,37 @@ function SectorAnalysisPanel({ analysis, currency, totalInvested }: { analysis: 
 function StockRecommendationsTable({ recommendations, underSectors, stockSectorMap, currency, recFilter, onRecFilterChange }: {
   recommendations: HoldingRecommendation[]; underSectors: string[]; stockSectorMap: Record<string, string>; currency: string; recFilter: string[]; onRecFilterChange: (_: React.MouseEvent<HTMLElement>, v: string[]) => void;
 }) {
+  const [selectionModel, setSelectionModel] = useState<GridRowSelectionModel>({ type: 'include', ids: new Set() });
+  const [copySnackbar, setCopySnackbar] = useState(false);
+
   const filtered = recommendations.filter((r) => r.is_active && recFilter.includes(r.recommendation_type));
+
   const isUnderInvested = (symbol: string): boolean => {
     const sec = stockSectorMap[symbol] || '';
     const isNamed = NAMED_SECTORS.includes(sec);
     return isNamed ? underSectors.includes(sec) : underSectors.includes('Others');
   };
+
+  const handleGetSymbols = (): void => {
+    const selected = filtered.filter((r) => selectionModel.ids.has(r.id));
+    const lines = selected.map((r) => {
+      const limitPrice = Math.ceil(1.01 * r.price_last_close);
+      return `${r.recommendation_type} - ${r.stock_symbol} - ${limitPrice} - ${r.purchase_quantity}`;
+    });
+    navigator.clipboard.writeText(lines.join('\n')).then(() => setCopySnackbar(true));
+  };
+
+  const splitIntoSentences = (text: string) =>
+    text
+      .split(/(?<=[.!?])\s+(?=[A-Z])/)
+      .map(s => s.trim())
+      .filter(Boolean);
+
   const columns: GridColDef[] = [
     {
       field: 'rank',
-      headerName: '#',
-      width: 60,
+      headerName: 'Rank',
+      width: 100,
       type: 'number',
       renderCell: (p: GridRenderCellParams) => {
         const rank = p.value as number | null;
@@ -943,28 +964,119 @@ function StockRecommendationsTable({ recommendations, underSectors, stockSectorM
         );
       },
     },
-    { field: '_priority', headerName: '', width: 44, sortable: false, renderCell: (p: GridRenderCellParams) => isUnderInvested(p.row.stock_symbol) ? (<Tooltip title={`${stockSectorMap[p.row.stock_symbol] || 'Others'} sector is below target — priority buy`}><Star sx={{ color: '#f5a623', fontSize: 18 }} /></Tooltip>) : null },
-    { field: 'stock_symbol', headerName: 'Symbol', width: 140, renderCell: (p: GridRenderCellParams) => { const priority = isUnderInvested(p.row.stock_symbol); return (<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: '100%' }}><Typography variant="body2" fontWeight={700}>{p.value as string}</Typography>{priority && (<Chip label="▲" size="small" sx={{ height: 17, fontSize: '0.62rem', bgcolor: '#fff3e0', color: '#e65100', border: '1px solid #ffcc80' }} />)}</Box>); } },
-    { field: 'recommendation_type', headerName: 'Action', width: 100, renderCell: (p: GridRenderCellParams) => { const map: Record<string, { bg: string; fg: string }> = { BUY: { bg: '#e8f5e9', fg: '#2e7d32' }, SELL: { bg: '#ffebee', fg: '#c62828' }, HOLD: { bg: '#fff8e1', fg: '#f57f17' } }; const c = map[p.value as string] || { bg: '#f5f5f5', fg: '#555' }; return <Chip label={p.value as string} size="small" sx={{ bgcolor: c.bg, color: c.fg, fontWeight: 700, minWidth: 52 }} />; } },
-    { field: '_sector', headerName: 'Sector', width: 155, sortable: false, valueGetter: (_: any, row: HoldingRecommendation) => stockSectorMap[row.stock_symbol] || '—' },
-    { field: 'current_quantity', headerName: 'Curr Qty', width: 88, type: 'number' },
-    { field: 'recommended_quantity', headerName: 'Rec Qty', width: 88, type: 'number', renderCell: (p: GridRenderCellParams) => (<Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, height: '100%' }}><Typography variant="body2" fontWeight={700} color="primary">{p.value as number}</Typography></Box>) },
-    { field: 'current_average_price', headerName: 'Avg Price', width: 125, type: 'number', valueFormatter: (v: number) => formatCurrency(v, currency) },
-    { field: 'target_price', headerName: 'Target', width: 125, type: 'number', renderCell: (p: GridRenderCellParams) => (<Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, height: '100%' }}><Typography variant="body2" fontWeight={700} color="success.main">{formatCurrency(p.value as number, currency)}</Typography></Box>) },
-    { field: 'price_52w_low', headerName: '52W Low', width: 120, type: 'number', valueFormatter: (v: number) => formatCurrency(v, currency) },
-    { field: 'pe_ratio', headerName: 'P/E', width: 75, type: 'number', valueFormatter: (v: number | null) => (v != null ? v.toFixed(1) : '—') },
-    { field: 'rsi_index', headerName: 'RSI', width: 75, type: 'number', renderCell: (p: GridRenderCellParams) => { const rsi = p.value as number | null; if (rsi == null) return <Typography variant="body2" color="text.disabled">—</Typography>; const color = rsi < 30 ? 'success.main' : rsi > 70 ? 'error.main' : 'text.primary'; return (<Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, height: '100%' }}><Typography variant="body2" fontWeight={600} color={color}>{rsi.toFixed(1)}</Typography></Box>); } },
-    { field: 'pegy_index', headerName: 'PEGY', width: 75, type: 'number', valueFormatter: (v: number | null) => (v != null ? v.toFixed(2) : '—') },
-    { field: 'recommendation_date', headerName: 'Date', width: 105, renderCell: (p: GridRenderCellParams) => (<Box><Typography variant="caption" display="block">{new Date(p.value as string).toLocaleDateString('en-IN')}</Typography><Typography variant="caption" color={getDaysAgoColor(p.value as string)}>{formatDaysAgo(p.value as string)}</Typography></Box>) },
+    {
+      field: 'stock_symbol',
+      headerName: 'Symbol',
+      width: 150,
+      renderCell: (p: GridRenderCellParams) => {
+        const priority = isUnderInvested(p.row.stock_symbol);
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: '100%' }}>
+            <Typography variant="body2" fontWeight={700}>{p.value as string}</Typography>
+            {priority && (<Chip label="▲" size="small" sx={{ height: 17, fontSize: '0.62rem', bgcolor: '#fff3e0', color: '#e65100', border: '1px solid #ffcc80' }} />)}
+          </Box>
+        );
+      },
+    },
+    {
+      field: 'recommendation_type',
+      headerName: 'Action',
+      width: 100,
+      renderCell: (p: GridRenderCellParams) => {
+        const map: Record<string, { bg: string; fg: string }> = { BUY: { bg: '#e8f5e9', fg: '#2e7d32' }, SELL: { bg: '#ffebee', fg: '#c62828' }, HOLD: { bg: '#fff8e1', fg: '#f57f17' } };
+        const c = map[p.value as string] || { bg: '#f5f5f5', fg: '#555' };
+        return <Chip label={p.value as string} size="small" sx={{ bgcolor: c.bg, color: c.fg, fontWeight: 700, minWidth: 52 }} />;
+      },
+    },
+    {
+      field: 'current_average_price',
+      headerName: 'Avg. Price',
+      width: 150,
+      type: 'number',
+      renderCell: (p: GridRenderCellParams) => {
+        const avgPrice = p.value as number;
+        const lastClose = p.row.price_last_close as number;
+        const pctLoss = avgPrice > 0 ? (avgPrice - lastClose) / avgPrice * 100 : null;
+
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', height: '100%' }}>
+            <Typography variant="body2" fontWeight={700} color="primary">
+              {formatCurrency(avgPrice, currency)}
+            </Typography>
+            {pctLoss !== null && (
+              <Typography variant="caption" color={pctLoss > 0 ? 'error' : 'success.main'}>
+                {pctLoss > 0 ? '▼' : '▲'} {Math.abs(pctLoss).toFixed(1)}%
+              </Typography>
+            )}
+          </Box>
+        );
+      },
+    },
+    {
+      field: 'purchase_quantity',
+      headerName: 'Purchase Qty',
+      width: 115,
+      type: 'number',
+      renderCell: (p: GridRenderCellParams) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, height: '100%' }}>
+          <Typography variant="body2" fontWeight={700} color="primary">{p.value as number}</Typography>
+        </Box>
+      ),
+    },
+    {
+      field: 'notes',
+      headerName: 'Notes',
+      flex: 1,
+      minWidth: 200,
+      sortable: false,
+      renderCell: (p: GridRenderCellParams) => {
+        const text = p.value as string | null;
+        if (!text) return <Typography variant="body2" color="text.disabled">—</Typography>;
+        const sentences = splitIntoSentences(text);
+        return (
+          <Tooltip title={text} placement="top-start" arrow>
+            <Typography 
+              variant="body2" 
+              color="text.secondary" 
+              sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'normal', maxWidth: '100%' }}>
+              {sentences.map((s, i) => (
+                <span key={i}>
+                  {s}
+                  {i < sentences.length - 1 && <br />}
+                </span>
+              ))}
+            </Typography>
+          </Tooltip>
+        );
+      },
+    },
   ];
+
   return (
     <Paper sx={{ mb: 3, boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
+      {/* ── Header bar ── */}
       <Box sx={{ p: 1.5, background: 'linear-gradient(90deg, #667eea, #764ba2)', borderRadius: '4px 4px 0 0', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
         <Lightbulb sx={{ color: 'white', fontSize: 20 }} />
         <Typography variant="subtitle1" fontWeight={700} color="white">Stock Recommendations</Typography>
         <Chip label={`${filtered.length} shown`} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.22)', color: 'white', fontWeight: 700, height: 20 }} />
+        {selectionModel.ids.size > 0 && (
+          <Chip label={`${selectionModel.ids.size} selected`} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.18)', color: 'white', fontWeight: 700, height: 20 }} />
+        )}
         {underSectors.length > 0 && (<Chip icon={<Star sx={{ color: '#f5a623 !important', fontSize: '14px !important' }} />} label="★ = priority sector" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.18)', color: 'white', fontSize: '0.7rem', height: 20 }} />)}
-        <Box sx={{ ml: 'auto' }}>
+        <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Tooltip title={selectionModel.ids.size === 0 ? 'Select rows to copy symbols' : `Copy ${selectionModel.ids.size} symbol(s)`}>
+            <span>
+              <Button
+                size="small"
+                variant="outlined"
+                disabled={selectionModel.ids.size === 0}
+                onClick={handleGetSymbols}
+                sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)', fontWeight: 700, fontSize: '0.72rem', py: 0.25, px: 1.25, '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' }, '&.Mui-disabled': { color: 'rgba(255,255,255,0.35)', borderColor: 'rgba(255,255,255,0.2)' } }}
+              >
+                Get Symbols
+              </Button>
+            </span>
+          </Tooltip>
           <ToggleButtonGroup value={recFilter} onChange={onRecFilterChange} size="small" sx={{ '& .MuiToggleButton-root': { color: 'rgba(255,255,255,0.7)', borderColor: 'rgba(255,255,255,0.3)', py: 0.25, px: 1.25, fontSize: '0.72rem' }, '& .Mui-selected': { color: 'white !important', bgcolor: 'rgba(255,255,255,0.2) !important' } }}>
             <ToggleButton value="BUY">BUY</ToggleButton>
             <ToggleButton value="SELL">SELL</ToggleButton>
@@ -972,23 +1084,52 @@ function StockRecommendationsTable({ recommendations, underSectors, stockSectorM
           </ToggleButtonGroup>
         </Box>
       </Box>
-      <Box sx={{ height: Math.min(480, 56 + filtered.length * 56 + 60) }}>
-        <DataGrid rows={filtered} 
-                  columns={columns} 
-                  initialState={
-                    { 
-                      pagination: { 
-                        paginationModel: { pageSize: 10 } 
-                      },
-                      sorting: {
-                        sortModel: [{ field: 'rank', sort: 'asc' }],
-                      },
-                    }
-                  } 
-                  pageSizeOptions={[10, 25, 50]} 
-                  disableRowSelectionOnClick rowHeight={56} 
-                  getRowClassName={(params) => isUnderInvested(params.row.stock_symbol) ? 'priority-row' : ''} sx={{ border: 'none', '& .priority-row': { bgcolor: '#fff8e1', '&:hover': { bgcolor: '#ffecb3' } }, '& .MuiDataGrid-columnHeaders': { bgcolor: '#f8f9ff' } }} />
+
+      {/* ── Table ── */}
+      <Box sx={{ height: 800, '& .MuiDataGrid-virtualScroller': { overflowX: 'hidden' } }}>
+        <DataGrid
+          rows={filtered}
+          columns={columns}
+          checkboxSelection
+          rowSelectionModel={selectionModel}
+          onRowSelectionModelChange={(model) => setSelectionModel(model)}
+          initialState={{
+            pagination: { paginationModel: { pageSize: 10 } },
+            sorting: { sortModel: [{ field: 'rank', sort: 'asc' }] },
+          }}
+          pageSizeOptions={[10, 25, 50]}
+          disableRowSelectionOnClick
+          getRowClassName={(params) => isUnderInvested(params.row.stock_symbol) ? 'priority-row' : ''}
+          getRowHeight={() => 'auto'}
+          sx={{ 
+            border: 'none', 
+            '& .priority-row': { 
+              bgcolor: '#fff8e1', 
+              '&:hover': { 
+                bgcolor: '#ffecb3' 
+              } 
+            }, 
+            '& .MuiDataGrid-columnHeaders': { bgcolor: '#f8f9ff' },
+            // prevents clipping of tall cells
+            '& .MuiDataGrid-cell': {
+              alignItems: 'flex-start',
+              py: 1,
+            },
+          }}
+        />
       </Box>
+
+      {/* ── Copy feedback ── */}
+      <Snackbar
+        open={copySnackbar}
+        autoHideDuration={3000}
+        onClose={() => setCopySnackbar(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="success" onClose={() => setCopySnackbar(false)} sx={{ width: '100%' }}>
+          {selectionModel.ids.size} symbol(s) copied to clipboard
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 }

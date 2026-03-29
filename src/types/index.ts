@@ -577,21 +577,21 @@ export interface ShareholdingRefreshResponse {
 
 export interface HoldingRecommendation {
     id: number;
-    account_id: string;
     stock_symbol: string;
+    stock_name?: string | null;
     recommendation_type: 'BUY' | 'SELL' | 'HOLD';
+    rank?: number | null;
     current_average_price: number;
-    current_quantity: number;
-    target_price: number;
-    recommended_quantity: number;
     price_52w_low: number;
+    price_last_close: number;
+    current_quantity: number;
+    purchase_quantity: number;
     pe_ratio?: number | null;
     pegy_index?: number | null;
     rsi_index?: number | null;
     recommendation_date: string;
     is_active: boolean;
-    created_at: string;
-    updated_at: string;
+    notes?: string | null;
 }
 
 export interface RecommendationsSummary {
