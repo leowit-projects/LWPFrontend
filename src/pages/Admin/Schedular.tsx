@@ -12,12 +12,14 @@ import {
   Alert,
   CircularProgress,
   Chip,
+  Tooltip,
 } from '@mui/material';
 import {
   Schedule,
   TrendingUp,
   Assessment,
   Lightbulb,
+  PieChart
 } from '@mui/icons-material';
 import { adminAPI } from '../../api/client';
 
@@ -41,6 +43,12 @@ const Scheduler: React.FC = () => {
   });
 
   const [recommendations, setRecommendations] = useState<TriggerState>({
+    loading: false,
+    message: null,
+    error: null,
+  });
+
+  const [shareholdingIndia, setShareholdingIndia] = useState<TriggerState>({
     loading: false,
     message: null,
     error: null,
@@ -96,6 +104,24 @@ const Scheduler: React.FC = () => {
         loading: false,
         message: null,
         error: error.response?.data?.detail || 'Failed to trigger recommendations calculation',
+      });
+    }
+  };
+
+  const handleTriggerShareholdingIndia = async (): Promise<void> => {
+    setShareholdingIndia({ loading: true, message: null, error: null });
+    try {
+      const response = await adminAPI.triggerShareholdingIndia();
+      setShareholdingIndia({
+        loading: false,
+        message: response.data.message,
+        error: null,
+      });
+    } catch (error: any) {
+      setShareholdingIndia({
+        loading: false,
+        message: null,
+        error: error.response?.data?.detail || 'Failed to trigger shareholding update',
       });
     }
   };
@@ -242,6 +268,90 @@ const Scheduler: React.FC = () => {
                 startIcon={recommendations.loading ? <CircularProgress size={20} /> : <Schedule />}
               >
                 {recommendations.loading ? 'Scheduling...' : 'Trigger Recommendations'}
+              </Button>
+            </CardActions>
+          </Card>
+        </Grid>
+        
+        {/* Indian Shareholding Pattern Update */}
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Card
+            sx={{
+              border: '1px solid',
+              borderColor: 'success.light',
+              background: (theme) =>
+                theme.palette.mode === 'dark'
+                  ? 'rgba(46, 125, 50, 0.08)'
+                  : 'rgba(237, 247, 237, 0.6)',
+            }}
+          >
+            <CardContent>
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                <Box display="flex" alignItems="center">
+                  <PieChart sx={{ mr: 1, color: 'success.main' }} />
+                  <Typography variant="h6" component="div">
+                    Shareholding Pattern
+                  </Typography>
+                </Box>
+                <Tooltip title="India — NSE / BSE stocks only">
+                  <Typography fontSize={24} lineHeight={1} sx={{ cursor: 'default' }}>
+                    🇮🇳
+                  </Typography>
+                </Tooltip>
+              </Box>
+
+              <Typography variant="body2" color="text.secondary" mb={2}>
+                Scrapes quarterly shareholding data for all active Indian stocks from screener.in and
+                updates Promoters, FIIs, DIIs, Government and Public holding percentages.
+              </Typography>
+
+              <Box display="flex" gap={1} flexWrap="wrap" mb={1}>
+                <Chip label="Promoters" size="small" color="success" variant="outlined" />
+                <Chip label="FIIs" size="small" color="info" variant="outlined" />
+                <Chip label="DIIs" size="small" color="primary" variant="outlined" />
+                <Chip label="Govt" size="small" variant="outlined" />
+                <Chip label="Public" size="small" variant="outlined" />
+              </Box>
+
+              <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
+                <Chip
+                  label="Monthly job"
+                  size="small"
+                  color="warning"
+                  variant="filled"
+                  sx={{ fontWeight: 600 }}
+                />
+                <Chip label="screener.in" size="small" variant="outlined" />
+              </Box>
+
+              {shareholdingIndia.message && (
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  {shareholdingIndia.message}
+                </Alert>
+              )}
+              {shareholdingIndia.error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {shareholdingIndia.error}
+                </Alert>
+              )}
+            </CardContent>
+
+            <CardActions>
+              <Button
+                fullWidth
+                variant="contained"
+                color="success"
+                onClick={handleTriggerShareholdingIndia}
+                disabled={shareholdingIndia.loading}
+                startIcon={
+                  shareholdingIndia.loading ? (
+                    <CircularProgress size={20} color="inherit" />
+                  ) : (
+                    <Schedule />
+                  )
+                }
+              >
+                {shareholdingIndia.loading ? 'Scheduling...' : 'Trigger Shareholding Update'}
               </Button>
             </CardActions>
           </Card>

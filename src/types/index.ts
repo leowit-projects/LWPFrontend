@@ -519,6 +519,55 @@ export interface ChartSummary {
     tracking_error?: number | null;
 }
 
+// Shareholding Pattern types (Indian stocks — scraped from screener.in)
+export enum ShareholdingType {
+    PROMOTERS = 'Promoters',
+    FIIs = 'FIIs',
+    DIIs = 'DIIs',
+    GOVT = 'Govt',
+    PUBLIC = 'Public',
+}
+
+export interface ShareholdingEntry {
+    quarter: string;           // e.g. "2025-Q3"
+    holding_type: ShareholdingType;
+    holding_percent: number;
+    updated_at: string;
+}
+
+export interface ShareholdingPatternResponse {
+    symbol: string;
+    count: number;
+    quarters_available: string[];                              // e.g. ["2025-Q4", "2025-Q3", ...]  newest first
+    shareholding: ShareholdingEntry[];                   // flat list
+    by_quarter: Record<string, Record<string, number>>; // { "2025-Q3": { "Promoters": 52.34, ... } }
+}
+
+export interface ConsolidatedStockResponse {
+    symbol: string;
+    price_history: {
+        count: number;
+        data: {
+            date: string;
+            close_price: number;
+            high_price: number;
+            low_price: number;
+            ma_20: number | null;
+            ma_200: number | null;
+        }[];
+    };
+    shareholding_pattern: {
+        count: number;
+        data: ShareholdingEntry[];
+    };
+}
+
+export interface ShareholdingRefreshResponse {
+    message: string;
+    triggered_by: string;
+    note: string;
+}
+
 // ── Add these to your existing types.ts ──────────────────────────────────────
 //
 // 1. HoldingRecommendation (was only used inside HoldingRecommendationsResponse)

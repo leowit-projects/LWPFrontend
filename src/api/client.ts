@@ -39,6 +39,8 @@ import {
     AssetTypeParam,
     PriceHistoryData,
     ChartSummary,
+    ShareholdingPatternResponse,
+    ShareholdingRefreshResponse,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -111,6 +113,9 @@ export const adminAPI = {
         info: string;
     }>> =>
         api.post('/api/admin/trigger-recommendations'),
+
+    triggerShareholdingIndia: (): Promise<AxiosResponse<ShareholdingRefreshResponse>> =>
+        api.post('/api/stocks/shareholding-india/refresh'),
 };
 
 // Stock API
@@ -387,6 +392,9 @@ export const historicalChartsAPI = {
         api.get<ChartSummary>(`/api/historical-charts/${symbol}/summary`, {
             params: { asset_type: assetType }
         }),
+
+    getShareholdingPattern: (symbol: string): Promise<AxiosResponse<ShareholdingPatternResponse>> =>
+        api.get<ShareholdingPatternResponse>(`/api/historical-charts/${symbol}/shareholding-pattern`),
 };
 
 export default api;
