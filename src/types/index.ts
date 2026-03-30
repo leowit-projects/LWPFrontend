@@ -664,3 +664,51 @@ export interface AIInsightsResponse {
     generated_at: string;
     hedging_ideas?: HedgingIdea[];  // Optional field for hedging ideas
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hedging Analysis Types
+// Append these to the bottom of src/types/index.ts
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface SectorInfo {
+    sector: string;
+    stock_count: number;
+    inr_count: number;
+    usd_count: number;
+}
+
+export interface SectorStock {
+    symbol: string;
+    name: string;
+    exchange: string;
+    currency: string;
+}
+
+export interface SectorStocksResponse {
+    sector: string;
+    currency: string | null;
+    count: number;
+    stocks: SectorStock[];
+}
+
+export interface CompareSeries {
+    id: string;             // "sector::Technology" | "stock::AAPL" | "etf::NIFTYBEES"
+    label: string;          // human-readable
+    type: 'sector' | 'stock' | 'etf';
+    dates: string[];
+    levels: (number | null)[];
+    beta: number | null;
+    correlation: number | null;
+    // sector-only
+    stock_count?: number;
+    // etf-only
+    name?: string;
+}
+
+export interface CompareResponse {
+    currency: string;
+    start_date: string;
+    end_date: string;
+    benchmark: string;
+    series: CompareSeries[];
+}

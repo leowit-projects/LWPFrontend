@@ -37,6 +37,7 @@ import {
   Work,
   ChevronLeft,
   ChevronRight,
+  ShowChart,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import MyLogo from '../assets/lion.png';
@@ -94,7 +95,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   menuItems.push({ text: 'ETFs', icon: <PieChart />, path: '/list-etfs' });
 
   if (isViewer || isAdmin) {
-    menuItems.push({ text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' });
+    menuItems.push({ text: 'Sector Analysis', icon: <ShowChart />, path: '/sector-analysis' });
   }
 
   // Admin submenu items

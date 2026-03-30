@@ -41,6 +41,9 @@ import {
     ChartSummary,
     ShareholdingPatternResponse,
     ShareholdingRefreshResponse,
+    SectorInfo,
+    SectorStocksResponse,
+    CompareResponse
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -395,6 +398,36 @@ export const historicalChartsAPI = {
 
     getShareholdingPattern: (symbol: string): Promise<AxiosResponse<ShareholdingPatternResponse>> =>
         api.get<ShareholdingPatternResponse>(`/api/historical-charts/${symbol}/shareholding-pattern`),
+};
+
+// Hedging API
+export const hedgingAPI = {
+    /** All active sectors with INR/USD stock counts */
+    getSectors: (): Promise<AxiosResponse<SectorInfo[]>> =>
+        api.get<SectorInfo[]>('/api/hedging/sectors'),
+
+    /** ETFs from your etf_symbols table, optionally filtered by currency */
+    getETFs: (currency?: 'INR' | 'USD'): Promise<AxiosResponse<ETFSymbol[]>> =>
+        api.get<ETFSymbol[]>('/api/hedging/etfs', {
+            params: currency ? { currency } : undefined,
+        }),
+
+    /** Stocks in a sector, optionally filtered by currency */
+    getStocksInSector: (sector: string, currency?: 'INR' | 'USD'): Promise<AxiosResponse<SectorStocksResponse>> =>
+        api.get<SectorStocksResponse>(`/api/hedging/sectors/${encodeURIComponent(sector)}/stocks`, {
+            params: currency ? { currency } : undefined,
+        }),
+
+    /** Unified compare: sector indexes + stocks + ETFs, all rebased to 100 */
+    compare: (payload: {
+        currency: 'INR' | 'USD';
+        sectors: string[];
+        tickers?: string[];
+        etf_symbols?: string[];
+        start_date: string;
+        end_date: string;
+    }): Promise<AxiosResponse<CompareResponse>> =>
+        api.post<CompareResponse>('/api/hedging/analysis/compare', payload),
 };
 
 export default api;

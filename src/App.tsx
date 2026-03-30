@@ -5,7 +5,6 @@ import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
 // import Holdings from './pages/Holdings';
 // import { AssetType } from './types';
 import AllowedEmails from './pages/Admin/AllowedEmails';
@@ -24,6 +23,7 @@ import ListEtfs from './pages/ListEtfs';
 import UploadHoldings from './pages/Holdings/UploadHoldings';
 import ListHoldings from './pages/Holdings/ListHoldings';
 import StockHistory from './pages/StockHistory';
+import SectorAnalysis from './pages/SectorAnalysis';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -142,11 +142,11 @@ const App: React.FC = () => {
                 }
               />
               <Route
-                path="/dashboard"
+                path="/sector-analysis"
                 element={
                   <ViewerRoute>
                     <Layout>
-                      <Dashboard />
+                      <SectorAnalysis />
                     </Layout>
                   </ViewerRoute>
                 }

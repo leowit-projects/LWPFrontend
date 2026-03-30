@@ -970,28 +970,32 @@ function StockRecommendationsTable({ recommendations, underSectors, stockSectorM
       width: 150,
       renderCell: (p: GridRenderCellParams) => {
         const priority = isUnderInvested(p.row.stock_symbol);
+        const action = p.row.recommendation_type as string;
+        const map: Record<string, { bg: string; fg: string }> = { BUY: { bg: '#e8f5e9', fg: '#2e7d32' }, SELL: { bg: '#ffebee', fg: '#c62828' }, HOLD: { bg: '#fff8e1', fg: '#f57f17' } };
+        const c = map[action as string] || { bg: '#f5f5f5', fg: '#555' };
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: '100%' }}>
             <Typography variant="body2" fontWeight={700}>{p.value as string}</Typography>
             {priority && (<Chip label="▲" size="small" sx={{ height: 17, fontSize: '0.62rem', bgcolor: '#fff3e0', color: '#e65100', border: '1px solid #ffcc80' }} />)}
+            <Chip label={action[0]} size="small" sx={{ bgcolor: c.bg, color: c.fg, fontWeight: 700 }} />
           </Box>
         );
       },
     },
-    {
-      field: 'recommendation_type',
-      headerName: 'Action',
-      width: 100,
-      renderCell: (p: GridRenderCellParams) => {
-        const map: Record<string, { bg: string; fg: string }> = { BUY: { bg: '#e8f5e9', fg: '#2e7d32' }, SELL: { bg: '#ffebee', fg: '#c62828' }, HOLD: { bg: '#fff8e1', fg: '#f57f17' } };
-        const c = map[p.value as string] || { bg: '#f5f5f5', fg: '#555' };
-        return <Chip label={p.value as string} size="small" sx={{ bgcolor: c.bg, color: c.fg, fontWeight: 700, minWidth: 52 }} />;
-      },
-    },
+    // {
+    //   field: 'recommendation_type',
+    //   headerName: 'Action',
+    //   width: 100,
+    //   renderCell: (p: GridRenderCellParams) => {
+    //     const map: Record<string, { bg: string; fg: string }> = { BUY: { bg: '#e8f5e9', fg: '#2e7d32' }, SELL: { bg: '#ffebee', fg: '#c62828' }, HOLD: { bg: '#fff8e1', fg: '#f57f17' } };
+    //     const c = map[p.value as string] || { bg: '#f5f5f5', fg: '#555' };
+    //     return <Chip label={p.value as string} size="small" sx={{ bgcolor: c.bg, color: c.fg, fontWeight: 700, minWidth: 52 }} />;
+    //   },
+    // },
     {
       field: 'current_average_price',
       headerName: 'Avg. Price',
-      width: 150,
+      width: 120,
       type: 'number',
       renderCell: (p: GridRenderCellParams) => {
         const avgPrice = p.value as number;
@@ -1014,8 +1018,8 @@ function StockRecommendationsTable({ recommendations, underSectors, stockSectorM
     },
     {
       field: 'purchase_quantity',
-      headerName: 'Purchase Qty',
-      width: 115,
+      headerName: 'Qty',
+      width: 80,
       type: 'number',
       renderCell: (p: GridRenderCellParams) => (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, height: '100%' }}>
@@ -1495,6 +1499,16 @@ const ListHoldings: React.FC = () => {
     return { stockInvested, stockCurrent, etfInvested, etfCurrent, totalInvested, totalCurrent, totalPnl, totalPnlPct, stockCount: stocks.length, etfCount: etfs.length };
   }, [holdings?.holdings.stocks, holdings?.holdings.etfs]);
 
+  const portfolioAllocation = useMemo(() => {
+    const mfCurrent   = (holdings?.holdings.mutual_funds ?? []).reduce((a, m) => a + m.current_value, 0);
+    const bondCurrent = (holdings?.holdings.bonds ?? []).reduce((a, b) => a + b.current_value, 0);
+    return [
+      { name: 'Stocks',     value: round2(combinedTotals.stockCurrent), color: '#667eea' },
+      { name: 'ETFs',       value: round2(combinedTotals.etfCurrent),   color: '#f5576c' },
+      { name: 'MF & Bonds', value: round2(mfCurrent + bondCurrent),     color: '#43e97b' },
+    ].filter(d => d.value > 0);
+  }, [combinedTotals, holdings?.holdings.mutual_funds, holdings?.holdings.bonds]);
+
   if (loading) {
     return (<Container maxWidth="xl" sx={{ mt: 4 }}><LinearProgress /><Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>Loading holdings…</Typography></Container>);
   }
@@ -1542,14 +1556,15 @@ const ListHoldings: React.FC = () => {
       {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
-      {/* ── Stocks + ETFs Combined Summary ── */}
-      {(combinedTotals.stockCount > 0 || combinedTotals.etfCount > 0) && (() => {
+      {/* ── Stocks + ETFs Overview  &  Portfolio Allocation — side by side ── */}
+      {(combinedTotals.stockCount > 0 || combinedTotals.etfCount > 0 || portfolioAllocation.length > 0) && (() => {
         const stockPnl = combinedTotals.stockCurrent - combinedTotals.stockInvested;
-        const etfPnl = combinedTotals.etfCurrent - combinedTotals.etfInvested;
+        const etfPnl   = combinedTotals.etfCurrent   - combinedTotals.etfInvested;
         const chartData = [{ name: 'Stocks', invested: round2(combinedTotals.stockInvested), current: round2(combinedTotals.stockCurrent), pnl: round2(stockPnl) }, { name: 'ETFs', invested: round2(combinedTotals.etfInvested), current: round2(combinedTotals.etfCurrent), pnl: round2(etfPnl) }];
         const C_INVESTED = '#667eea'; const C_CURRENT = '#4facfe'; const C_PNL_POS = '#43e97b'; const C_PNL_NEG = '#f5576c';
         const fmt = (v: number) => formatCurrency(v, holdings.currency);
         const pnlPct = (pnl: number, inv: number) => inv > 0 ? ` (${pnl >= 0 ? '+' : ''}${((pnl / inv) * 100).toFixed(2)}%)` : '';
+        const total = portfolioAllocation.reduce((a, d) => a + d.value, 0);
         const CustomTooltip = ({ active, payload, label }: any) => {
           if (!active || !payload?.length) return null;
           const inv = payload.find((p: any) => p.dataKey === 'invested')?.value ?? 0;
@@ -1558,34 +1573,85 @@ const ListHoldings: React.FC = () => {
           return (<Paper sx={{ p: 1.25, minWidth: 200, boxShadow: 4, border: '1px solid', borderColor: 'divider' }}><Typography variant="subtitle2" fontWeight={700} mb={0.5}>{label}</Typography>{[{ label: 'Invested', value: fmt(inv), color: C_INVESTED }, { label: 'Current Value', value: fmt(cur), color: C_CURRENT }].map(row => (<Box key={row.label} display="flex" justifyContent="space-between" gap={2} mb={0.2}><Typography variant="caption" color="text.secondary">{row.label}</Typography><Typography variant="caption" fontWeight={700} color={row.color}>{row.value}</Typography></Box>))}<Divider sx={{ my: 0.5 }} /><Box display="flex" justifyContent="space-between" gap={2}><Typography variant="caption" color="text.secondary">P&amp;L</Typography><Typography variant="caption" fontWeight={700} color={pnl >= 0 ? 'success.main' : 'error.main'}>{pnl >= 0 ? '+' : ''}{fmt(pnl)}{pnlPct(pnl, inv)}</Typography></Box></Paper>);
         };
         return (
-          <Paper sx={{ mb: 2, px: 3, py: 1.75, background: 'linear-gradient(135deg, #f8f9ff 0%, #fff 100%)', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', border: '1px solid', borderColor: 'grey.200', borderRadius: 2 }}>
-            <Box display="flex" alignItems="center" gap={1} mb={1.5}>
-              <AccountBalance sx={{ fontSize: 16, color: '#667eea' }} />
-              <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase" letterSpacing={0.5}>Stocks + ETFs Overview</Typography>
-              <Chip label={`${combinedTotals.stockCount} stocks · ${combinedTotals.etfCount} ETFs`} size="small" variant="outlined" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600, color: 'text.secondary' }} />
-            </Box>
-            <Box display="flex" gap={0} flexWrap="wrap" alignItems="flex-start">
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pr: 3, mr: 3, borderRight: '1px solid', borderColor: 'divider', minWidth: 160 }}>
-                <Box><Typography variant="caption" color="text.secondary" fontWeight={500}>Amount Invested</Typography><Typography variant="h6" fontWeight={700} lineHeight={1.2}>{fmt(combinedTotals.totalInvested)}</Typography></Box>
-                <Box><Typography variant="caption" color="text.secondary" fontWeight={500}>Current Value</Typography><Typography variant="h6" fontWeight={700} lineHeight={1.2}>{fmt(combinedTotals.totalCurrent)}</Typography></Box>
-                <Box><Typography variant="caption" color="text.secondary" fontWeight={500}>Total P&amp;L</Typography><Box display="flex" alignItems="baseline" gap={0.75}><Typography variant="h6" fontWeight={700} lineHeight={1.2} color={combinedTotals.totalPnl >= 0 ? 'success.main' : 'error.main'}>{combinedTotals.totalPnl >= 0 ? '+' : ''}{fmt(combinedTotals.totalPnl)}</Typography><Chip label={formatPercentage(combinedTotals.totalPnlPct)} size="small" color={combinedTotals.totalPnl >= 0 ? 'success' : 'error'} sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700 }} /></Box></Box>
-              </Box>
-              <Box sx={{ flex: 1, minWidth: 320 }}>
-                <ResponsiveContainer width="100%" height={130}>
-                  <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 80, left: 8, bottom: 4 }} barCategoryGap="28%" barGap={3}>
-                    <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis type="number" tickFormatter={(v: number) => formatCurrency(v, holdings.currency)} tick={{ display: 'none' }} axisLine={false} tickLine={false} />
-                    <YAxis type="category" dataKey="name" width={48} tick={{ fontSize: 12, fontWeight: 600, fill: '#444' }} axisLine={false} tickLine={false} />
-                    <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
-                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
-                    <Bar dataKey="invested" name="Invested" fill={C_INVESTED} radius={[0, 3, 3, 0]} barSize={14}><LabelList dataKey="invested" position="right" formatter={(v: any) => typeof v === 'number' ? fmt(v) : ''} style={{ fontSize: 10, fontWeight: 600, fill: C_INVESTED }} /></Bar>
-                    <Bar dataKey="current" name="Current" fill={C_CURRENT} radius={[0, 3, 3, 0]} barSize={14}><LabelList dataKey="current" position="right" formatter={(v: any) => typeof v === 'number' ? fmt(v) : ''} style={{ fontSize: 10, fontWeight: 600, fill: C_CURRENT }} /></Bar>
-                    <Bar dataKey="pnl" name="P&L" radius={[0, 3, 3, 0]} barSize={14}>{chartData.map((entry, i) => <Cell key={i} fill={entry.pnl >= 0 ? C_PNL_POS : C_PNL_NEG} />)}<LabelList dataKey="pnl" position="right" formatter={(v: any) => typeof v === 'number' ? `${v >= 0 ? '+' : ''}${fmt(v)}` : ''} style={{ fontSize: 10, fontWeight: 700, fill: '#555' }} /></Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </Box>
-            </Box>
-          </Paper>
+          <Box display="flex" gap={2} mb={2} flexWrap="wrap" alignItems="stretch">
+
+            {/* ── Left: Stocks + ETFs Overview ── */}
+            {(combinedTotals.stockCount > 0 || combinedTotals.etfCount > 0) && (
+              <Paper sx={{ flex: 2, minWidth: 340, px: 3, py: 1.75, background: 'linear-gradient(135deg, #f8f9ff 0%, #fff 100%)', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', border: '1px solid', borderColor: 'grey.200', borderRadius: 2 }}>
+                <Box display="flex" alignItems="center" gap={1} mb={1.5}>
+                  <AccountBalance sx={{ fontSize: 16, color: '#667eea' }} />
+                  <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase" letterSpacing={0.5}>Stocks + ETFs Overview</Typography>
+                  <Chip label={`${combinedTotals.stockCount} stocks · ${combinedTotals.etfCount} ETFs`} size="small" variant="outlined" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600, color: 'text.secondary' }} />
+                </Box>
+                <Box display="flex" gap={0} flexWrap="wrap" alignItems="flex-start">
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pr: 3, mr: 3, borderRight: '1px solid', borderColor: 'divider', minWidth: 160 }}>
+                    <Box><Typography variant="caption" color="text.secondary" fontWeight={500}>Amount Invested</Typography><Typography variant="h6" fontWeight={700} lineHeight={1.2}>{fmt(combinedTotals.totalInvested)}</Typography></Box>
+                    <Box><Typography variant="caption" color="text.secondary" fontWeight={500}>Current Value</Typography><Typography variant="h6" fontWeight={700} lineHeight={1.2}>{fmt(combinedTotals.totalCurrent)}</Typography></Box>
+                    <Box><Typography variant="caption" color="text.secondary" fontWeight={500}>Total P&amp;L</Typography><Box display="flex" alignItems="baseline" gap={0.75}><Typography variant="h6" fontWeight={700} lineHeight={1.2} color={combinedTotals.totalPnl >= 0 ? 'success.main' : 'error.main'}>{combinedTotals.totalPnl >= 0 ? '+' : ''}{fmt(combinedTotals.totalPnl)}</Typography><Chip label={formatPercentage(combinedTotals.totalPnlPct)} size="small" color={combinedTotals.totalPnl >= 0 ? 'success' : 'error'} sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700 }} /></Box></Box>
+                  </Box>
+                  <Box sx={{ flex: 1, minWidth: 280 }}>
+                    <ResponsiveContainer width="100%" height={130}>
+                      <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 80, left: 8, bottom: 4 }} barCategoryGap="28%" barGap={3}>
+                        <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis type="number" tickFormatter={(v: number) => formatCurrency(v, holdings.currency)} tick={{ display: 'none' }} axisLine={false} tickLine={false} />
+                        <YAxis type="category" dataKey="name" width={48} tick={{ fontSize: 12, fontWeight: 600, fill: '#444' }} axisLine={false} tickLine={false} />
+                        <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
+                        <Bar dataKey="invested" name="Invested" fill={C_INVESTED} radius={[0, 3, 3, 0]} barSize={14}><LabelList dataKey="invested" position="right" formatter={(v: any) => typeof v === 'number' ? fmt(v) : ''} style={{ fontSize: 10, fontWeight: 600, fill: C_INVESTED }} /></Bar>
+                        <Bar dataKey="current" name="Current" fill={C_CURRENT} radius={[0, 3, 3, 0]} barSize={14}><LabelList dataKey="current" position="right" formatter={(v: any) => typeof v === 'number' ? fmt(v) : ''} style={{ fontSize: 10, fontWeight: 600, fill: C_CURRENT }} /></Bar>
+                        <Bar dataKey="pnl" name="P&L" radius={[0, 3, 3, 0]} barSize={14}>{chartData.map((entry, i) => <Cell key={i} fill={entry.pnl >= 0 ? C_PNL_POS : C_PNL_NEG} />)}<LabelList dataKey="pnl" position="right" formatter={(v: any) => typeof v === 'number' ? `${v >= 0 ? '+' : ''}${fmt(v)}` : ''} style={{ fontSize: 10, fontWeight: 700, fill: '#555' }} /></Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Box>
+                </Box>
+              </Paper>
+            )}
+
+            {/* ── Right: Portfolio Allocation Pie ── */}
+            {portfolioAllocation.length > 0 && (
+              <Paper sx={{ flex: 1, minWidth: 260, px: 3, py: 1.75, background: 'linear-gradient(135deg, #f8f9ff 0%, #fff 100%)', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', border: '1px solid', borderColor: 'grey.200', borderRadius: 2 }}>
+                <Box display="flex" alignItems="center" gap={1} mb={1.5}>
+                  <PieChartIcon sx={{ fontSize: 16, color: '#764ba2' }} />
+                  <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase" letterSpacing={0.5}>Portfolio Allocation</Typography>
+                  <Chip label={`Total: ${fmt(total)}`} size="small" variant="outlined" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600, color: 'text.secondary' }} />
+                </Box>
+                <Box display="flex" alignItems="center" gap={3} flexWrap="wrap">
+                  <Box sx={{ position: 'relative', width: 150, height: 150, flexShrink: 0 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={portfolioAllocation} cx="50%" cy="50%" innerRadius={48} outerRadius={68} dataKey="value" paddingAngle={2} startAngle={90} endAngle={-270}>
+                          {portfolioAllocation.map((d, i) => <Cell key={i} fill={d.color} stroke="none" />)}
+                        </Pie>
+                        <RechartsTooltip formatter={(v: any) => [fmt(Number(v)), '']} separator="" contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
+                      <Typography variant="caption" color="text.secondary" display="block" lineHeight={1.2}>Portfolio</Typography>
+                      <Typography variant="caption" color="text.secondary" display="block" lineHeight={1.2}>Value</Typography>
+                    </Box>
+                  </Box>
+                  <Box display="flex" flexDirection="column" gap={1.25}>
+                    {portfolioAllocation.map(d => {
+                      const pct = total > 0 ? (d.value / total * 100).toFixed(1) : '0';
+                      return (
+                        <Box key={d.name} display="flex" alignItems="center" gap={1.25}>
+                          <Box sx={{ width: 11, height: 11, borderRadius: '50%', bgcolor: d.color, flexShrink: 0 }} />
+                          <Box>
+                            <Box display="flex" alignItems="baseline" gap={0.75}>
+                              <Typography variant="body2" fontWeight={700}>{d.name}</Typography>
+                              <Chip label={`${pct}%`} size="small" sx={{ height: 17, fontSize: '0.62rem', fontWeight: 700, bgcolor: d.color + '22', color: d.color }} />
+                            </Box>
+                            <Typography variant="caption" color="text.secondary">{fmt(d.value)}</Typography>
+                          </Box>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                </Box>
+              </Paper>
+            )}
+
+          </Box>
         );
       })()}
 
