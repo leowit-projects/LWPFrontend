@@ -16,13 +16,7 @@ import type { SectorInfo, ETFSymbol, SectorStock, CompareResponse, CompareSeries
 // Sector lines = solid, Stock lines = dashed, ETF lines = dotted
 const COLORS = ['#1565c0', '#c62828', '#2e7d32', '#6a1b9a', '#e65100', '#00838f', '#4e342e', '#37474f'];
 
-const typeStyle: Record<string, { strokeDasharray: string; strokeWidth: number }> = {
-  sector: { strokeDasharray: '0',    strokeWidth: 2.5 },
-  stock:  { strokeDasharray: '6 3',  strokeWidth: 1.8 },
-  etf:    { strokeDasharray: '2 4',  strokeWidth: 2.0 },
-};
-
-const typeIcon: Record<string, React.ReactNode> = {
+const typeIcon: Record<string, React.ReactElement> = {
   sector: <ShowChart    fontSize="small" />,
   stock:  <TrendingUp   fontSize="small" />,
   etf:    <AccountBalance fontSize="small" />,
@@ -552,7 +546,7 @@ const SectorAnalysis: React.FC = () => {
                             </TableCell>
                             <TableCell>
                               <Chip
-                                icon={typeIcon[s.type]}
+                                icon={typeIcon[s.type] || undefined}
                                 label={typeLabel[s.type]}
                                 size="small"
                                 variant="outlined"

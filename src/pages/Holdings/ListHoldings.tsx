@@ -787,7 +787,7 @@ function SectorPieChart({ stocks, currency }: { stocks: Array<{ sector?: string 
           <Pie data={data} cx="50%" cy="50%" outerRadius={150} dataKey="value" labelLine={false} label={renderLabel}>
             {data.map((entry, i) => <Cell key={i} fill={SECTOR_COLORS[entry.name] ?? PIE_COLORS[i % PIE_COLORS.length]} />)}
           </Pie>
-          <RechartsTooltip formatter={(val: number, name: string) => [`${formatCurrency(val, currency)} (${((val / total) * 100).toFixed(1)}%)`, name]} />
+          <RechartsTooltip formatter={(val: any, name: any) => [`${formatCurrency(Number(val), currency)} (${((Number(val) / total) * 100).toFixed(1)}%)`, String(name)]} />
           <Legend iconType="circle" iconSize={9} formatter={(value, entry: any) => <span style={{ fontSize: 11, color: '#555' }}>{value} — {formatCurrency(entry.payload.value, currency)}</span>} />
         </PieChart>
       </ResponsiveContainer>
