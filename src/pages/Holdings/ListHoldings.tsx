@@ -415,7 +415,7 @@ function AIInsightsTab({
             Claude is reviewing your portfolio…
           </Typography>
           <Typography variant="caption" color="text.disabled">
-            Checking against all 5 investment philosophies
+            Checking against all 10 investment philosophies
           </Typography>
         </Paper>
       )}
@@ -434,7 +434,7 @@ function AIInsightsTab({
           </Typography>
           <Typography variant="body2" color="text.disabled" sx={{ maxWidth: 400, mx: 'auto', mb: 3 }}>
             Click "Generate Insights" to get a personalised analysis of your portfolio aligned to your
-            value investing philosophies — slow &amp; steady, defensive, diversification, value &amp; promoter integrity.
+            value investing philosophies by Mr. Anand Srinivasan — intrinsic value, fundamentals, strong management, long-term compounding, and more.
           </Typography>
           <Button
             variant="outlined"
