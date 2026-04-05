@@ -24,6 +24,7 @@ import UploadHoldings from './pages/Holdings/UploadHoldings';
 import ListHoldings from './pages/Holdings/ListHoldings';
 import StockHistory from './pages/StockHistory';
 import SectorAnalysis from './pages/SectorAnalysis';
+import StockSuggestions from './pages/StockSuggestions';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -139,6 +140,16 @@ const App: React.FC = () => {
                       <ListEtfs />
                     </Layout>
                   </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stock-suggestions"
+                element={
+                  <ViewerRoute>
+                    <Layout>
+                      <StockSuggestions />
+                    </Layout>
+                  </ViewerRoute>
                 }
               />
               <Route

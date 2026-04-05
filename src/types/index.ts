@@ -712,3 +712,30 @@ export interface CompareResponse {
     benchmark: string;
     series: CompareSeries[];
 }
+
+// Stock Suggestions types
+export interface StockSuggestion {
+    id: number;
+    stock_symbol: string;
+    exchange: string;
+    recommendation_month: string;   // "YYYY-MM"
+    recommended_price: number | null;
+    recommended_by: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface StockSuggestionCreate {
+    stock_symbol: string;
+    exchange: string;
+    recommendation_month: string;   // "YYYY-MM"
+    recommended_price?: number | null;
+    recommended_by: string;
+}
+
+export interface StockSuggestionUpdate {
+    exchange?: string;
+    recommendation_month?: string;
+    recommended_price?: number | null;
+    recommended_by?: string;
+}

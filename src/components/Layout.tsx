@@ -28,6 +28,7 @@ import {
   ExpandLess,
   ExpandMore,
   Email,
+  Lightbulb,
   TrendingUp,
   Business,
   Category,
@@ -95,6 +96,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   if (isViewer || isAdmin) {
     menuItems.push({ text: 'Sector Analysis', icon: <ShowChart />, path: '/sector-analysis' });
+  }
+
+  if (isViewer || isAdmin) {
+    menuItems.push({ text: 'Suggestions', icon: <Lightbulb />, path: '/stock-suggestions' });
   }
 
   // Admin submenu items

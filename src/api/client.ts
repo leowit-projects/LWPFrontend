@@ -43,7 +43,10 @@ import {
     ShareholdingRefreshResponse,
     SectorInfo,
     SectorStocksResponse,
-    CompareResponse
+    CompareResponse,
+    StockSuggestion,
+    StockSuggestionCreate,
+    StockSuggestionUpdate,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -428,6 +431,27 @@ export const hedgingAPI = {
         end_date: string;
     }): Promise<AxiosResponse<CompareResponse>> =>
         api.post<CompareResponse>('/api/hedging/analysis/compare', payload),
+};
+
+// Stock Suggestions API
+export const stockSuggestionsAPI = {
+    getAll: (params?: {
+        month?: string;          // "YYYY-MM"
+        recommended_by?: string;
+    }): Promise<AxiosResponse<StockSuggestion[]>> =>
+        api.get<StockSuggestion[]>('/api/stock-suggestions', { params }),
+
+    getById: (id: number): Promise<AxiosResponse<StockSuggestion>> =>
+        api.get<StockSuggestion>(`/api/stock-suggestions/${id}`),
+
+    create: (data: StockSuggestionCreate): Promise<AxiosResponse<StockSuggestion>> =>
+        api.post<StockSuggestion>('/api/stock-suggestions', data),
+
+    update: (id: number, data: StockSuggestionUpdate): Promise<AxiosResponse<StockSuggestion>> =>
+        api.put<StockSuggestion>(`/api/stock-suggestions/${id}`, data),
+
+    delete: (id: number): Promise<AxiosResponse<void>> =>
+        api.delete(`/api/stock-suggestions/${id}`),
 };
 
 export default api;
