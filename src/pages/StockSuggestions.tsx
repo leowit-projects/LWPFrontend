@@ -266,7 +266,7 @@ const PivotTable: React.FC<PivotTableProps> = ({
 
                       const multipleRecommenders = cell.recommenders.length > 1;
                       const tooltipText = cell.recommenders
-                        .map((r, i) =>
+                        .map((r) =>
                           cell.ids.length > 1
                             ? `${r}${cell.price != null ? ` (${currency}${cell.price})` : ''}`
                             : r,
@@ -330,10 +330,10 @@ const PivotTable: React.FC<PivotTableProps> = ({
                             color="error"
                             onClick={() => {
                               // Find the most-recent month with data and delete its first entry
-                              const latestMonth = [...(mmap?.keys() ?? [])]
+                              const monthArray = [...(mmap?.keys() ?? [])]
                                 .filter((mk) => months.includes(mk))
-                                .sort()
-                                .at(-1);
+                                .sort();
+                              const latestMonth = monthArray[monthArray.length - 1];
                               if (!latestMonth) return;
                               const cell = mmap?.get(latestMonth);
                               if (!cell) return;
