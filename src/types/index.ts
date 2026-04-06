@@ -669,7 +669,6 @@ export interface AIInsightsResponse {
 // Hedging Analysis Types
 // Append these to the bottom of src/types/index.ts
 // ─────────────────────────────────────────────────────────────────────────────
-
 export interface SectorInfo {
     sector: string;
     stock_count: number;
@@ -738,4 +737,50 @@ export interface StockSuggestionUpdate {
     recommendation_month?: string;
     recommended_price?: number | null;
     recommended_by?: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Nifty Expiry and Beta Analysis types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface NiftyExpiryInfo {
+    expiry_date: string;   // ISO date e.g. "2025-04-24"
+    days_to_expiry: number;
+    expiry_month_label: string;   // e.g. "Apr 2025"
+    urgency: 'normal' | 'amber' | 'critical';
+}
+
+export interface HoldingBetaResult {
+    symbol: string;
+    company_name: string | null;
+    beta: number | null;
+    correlation: number | null;
+    risk_level: 'Low' | 'Medium' | 'High' | 'Unknown';
+    current_value: number | null;
+    data_points: number;
+    error: string | null;
+}
+
+export interface PortfolioBetaResponse {
+    success: boolean;
+    benchmark_symbol: string | null;
+    benchmark_price: number | null;    // latest NIFTYBEES close price
+    lookback_days: number | null;
+    market_data_points: number | null;
+    nifty_expiry: NiftyExpiryInfo | null;
+    holdings: HoldingBetaResult[];
+    portfolio_beta: number | null;
+    portfolio_value: number | null;
+    hedge_lots_suggested: number | null;
+    hedge_value_required: number | null;   // approximate margin needed
+    nifty_lot_size: number | null;
+    nifty_lot_value: number | null;   // lot_size × benchmark_price
+    error: string | null;
+}
+
+export interface CorrelationMatrixResponse {
+    success: boolean;
+    symbols: string[];
+    matrix: number[][];
+    error: string | null;
 }

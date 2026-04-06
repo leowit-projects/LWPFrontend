@@ -30,6 +30,7 @@ import {
   AccountBalance,
   Refresh,
   Upload,
+  QueryStats,         // ← beta analysis icon
 } from '@mui/icons-material';
 import { holdingAccountsAPI } from '../../api/client';
 import { 
@@ -63,7 +64,7 @@ const HoldingAccounts: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await holdingAccountsAPI.getAll(true); // Include inactive
+      const response = await holdingAccountsAPI.getAll(true);
       setAccounts(response.data);
     } catch (error: any) {
       console.error('Failed to load holding accounts:', error);
@@ -103,13 +104,11 @@ const HoldingAccounts: React.FC = () => {
   };
 
   const handleSubmit = async (): Promise<void> => {
-    // Validate account_id
     if (!formData.account_id.trim()) {
       setError('Account ID is required');
       return;
     }
 
-    // Validate currency matches platform
     const inrPlatforms = [AccountPlatform.ZERODHA, AccountPlatform.AIONION, AccountPlatform.CHOLA_SECURITIES];
     const usdPlatforms = [AccountPlatform.FIDELITY];
 
@@ -146,7 +145,6 @@ const HoldingAccounts: React.FC = () => {
     if (!window.confirm(`Are you sure you want to deactivate account ${accountId}?`)) {
       return;
     }
-
     try {
       await holdingAccountsAPI.delete(accountId);
       setSuccess(`Account ${accountId} deactivated successfully`);
@@ -161,7 +159,6 @@ const HoldingAccounts: React.FC = () => {
     if (!window.confirm(`Are you sure you want to reactivate account ${accountId}?`)) {
       return;
     }
-
     try {
       await holdingAccountsAPI.reactivate(accountId);
       setSuccess(`Account ${accountId} reactivated successfully`);
@@ -176,18 +173,20 @@ const HoldingAccounts: React.FC = () => {
     navigate(`/upload-holdings/${accountId}`);
   };
 
+  // ── Holding Analysis ──────────────────────────────────────────────────────────
+  // Opens the holding analysis page in a new browser tab.
+  // Only shown for active INR accounts (holding analysis is India-only).
+  const handleHoldingAnalysis = (accountId: string): void => {
+    window.open(`/holding-analysis/${accountId}`, '_blank', 'noopener,noreferrer');
+  };
+
   const getPlatformColor = (platform: AccountPlatform): 'primary' | 'secondary' | 'success' | 'info' => {
     switch (platform) {
-      case AccountPlatform.ZERODHA:
-        return 'primary';
-      case AccountPlatform.FIDELITY:
-        return 'success';
-      case AccountPlatform.AIONION:
-        return 'secondary';
-      case AccountPlatform.CHOLA_SECURITIES:
-        return 'info';
-      default:
-        return 'primary';
+      case AccountPlatform.ZERODHA:       return 'primary';
+      case AccountPlatform.FIDELITY:      return 'success';
+      case AccountPlatform.AIONION:       return 'secondary';
+      case AccountPlatform.CHOLA_SECURITIES: return 'info';
+      default:                            return 'primary';
     }
   };
 
@@ -210,10 +209,7 @@ const HoldingAccounts: React.FC = () => {
           onClick={() => navigate(`/list-holdings/${params.value}`)}
           sx={{
             cursor: 'pointer',
-            '&:hover': {
-              textDecoration: 'underline',
-              color: 'primary.main',
-            },
+            '&:hover': { textDecoration: 'underline', color: 'primary.main' },
           }}
         >
           <Typography variant="body2" fontWeight={600} color="primary">
@@ -243,11 +239,7 @@ const HoldingAccounts: React.FC = () => {
       align: 'center',
       headerAlign: 'center',
       renderCell: (params: GridRenderCellParams) => (
-        <Chip
-          label={params.value}
-          variant="outlined"
-          size="small"
-        />
+        <Chip label={params.value} variant="outlined" size="small" />
       ),
     },
     {
@@ -281,11 +273,30 @@ const HoldingAccounts: React.FC = () => {
       type: 'actions',
       headerName: 'Actions',
       flex: 1,
-      minWidth: 160,
+      minWidth: 180,
       getActions: (params) => {
         const account = params.row as HoldingAccount;
+        const isINR   = account.currency === CurrencyCode.INR;
+
         const actions = [
+          // ── Holding Analysis icon — INR active accounts only ──────────────────
+          ...(isINR && account.is_active ? [
+            <GridActionsCellItem
+              key="holding"
+              icon={
+                <Tooltip title="Holding Analysis (India)">
+                  <QueryStats fontSize="small" color="secondary" />
+                </Tooltip>
+              }
+              label="Holding Analysis"
+              onClick={() => handleHoldingAnalysis(account.account_id)}
+              showInMenu={false}
+            />,
+          ] : []),
+
+          // ── Upload Holdings ────────────────────────────────────────────────
           <GridActionsCellItem
+            key="upload"
             icon={
               <Tooltip title="Upload Holdings">
                 <Upload fontSize="small" />
@@ -296,7 +307,10 @@ const HoldingAccounts: React.FC = () => {
             showInMenu={false}
             disabled={!account.is_active}
           />,
+
+          // ── Edit ──────────────────────────────────────────────────────────
           <GridActionsCellItem
+            key="edit"
             icon={
               <Tooltip title="Edit">
                 <Edit fontSize="small" />
@@ -308,9 +322,11 @@ const HoldingAccounts: React.FC = () => {
           />,
         ];
 
+        // ── Deactivate / Reactivate ──────────────────────────────────────────
         if (account.is_active) {
           actions.push(
             <GridActionsCellItem
+              key="deactivate"
               icon={
                 <Tooltip title="Deactivate">
                   <Delete fontSize="small" />
@@ -324,6 +340,7 @@ const HoldingAccounts: React.FC = () => {
         } else {
           actions.push(
             <GridActionsCellItem
+              key="reactivate"
               icon={
                 <Tooltip title="Reactivate">
                   <Refresh fontSize="small" />
@@ -399,17 +416,14 @@ const HoldingAccounts: React.FC = () => {
             }}
             disableRowSelectionOnClick
             sx={{
-              '& .MuiDataGrid-cell:focus': {
-                outline: 'none',
-              },
-              '& .MuiDataGrid-row:hover': {
-                cursor: 'pointer',
-              },
+              '& .MuiDataGrid-cell:focus': { outline: 'none' },
+              '& .MuiDataGrid-row:hover': { cursor: 'pointer' },
             }}
           />
         </Box>
       </Paper>
 
+      {/* ── Add / Edit Dialog ──────────────────────────────────────────────── */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
           {editMode ? 'Edit Holding Account' : 'Add New Holding Account'}
@@ -442,18 +456,10 @@ const HoldingAccounts: React.FC = () => {
               required
               sx={{ mb: 2 }}
             >
-              <MenuItem value={AccountPlatform.ZERODHA}>
-                ZERODHA (INR)
-              </MenuItem>
-              <MenuItem value={AccountPlatform.AIONION}>
-                AIONION (INR)
-              </MenuItem>
-              <MenuItem value={AccountPlatform.CHOLA_SECURITIES}>
-                CHOLA SECURITIES (INR)
-              </MenuItem>
-              <MenuItem value={AccountPlatform.FIDELITY}>
-                FIDELITY (USD)
-              </MenuItem>
+              <MenuItem value={AccountPlatform.ZERODHA}>ZERODHA (INR)</MenuItem>
+              <MenuItem value={AccountPlatform.AIONION}>AIONION (INR)</MenuItem>
+              <MenuItem value={AccountPlatform.CHOLA_SECURITIES}>CHOLA SECURITIES (INR)</MenuItem>
+              <MenuItem value={AccountPlatform.FIDELITY}>FIDELITY (USD)</MenuItem>
             </TextField>
 
             <TextField
@@ -472,10 +478,8 @@ const HoldingAccounts: React.FC = () => {
             <Alert severity="info" sx={{ mt: 2 }}>
               <Typography variant="body2">
                 <strong>Platform Currency Requirements:</strong>
-                <br />
-                • ZERODHA, AIONION, CHOLA SECURITIES: INR only
-                <br />
-                • FIDELITY: USD only
+                <br />• ZERODHA, AIONION, CHOLA SECURITIES: INR only
+                <br />• FIDELITY: USD only
               </Typography>
             </Alert>
           </Box>

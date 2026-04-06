@@ -4,27 +4,32 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
+
+// Pages
 import Login from './pages/Login';
-// import Holdings from './pages/Holdings';
-// import { AssetType } from './types';
+import AuditLogs from './pages/Admin/AuditLogs';
+import Strategies from './pages/Admin/Strategies';
+import ListStocks from './pages/ListStocks';
+import ListEtfs from './pages/ListEtfs';
+
+import StockHistory from './pages/StockHistory';
+import SectorAnalysis from './pages/SectorAnalysis';
+import StockSuggestions from './pages/StockSuggestions';
+
+// Holdings related pages
+import HoldingAccounts from './pages/Holdings/HoldingAccounts';
+import UploadHoldings from './pages/Holdings/UploadHoldings';
+import ListHoldings from './pages/Holdings/ListHoldings';
+import HoldingAnalysis from './pages/Holdings/HoldingAnalysis';
+
+// Admin pages
+import Scheduler from './pages/Admin/Schedular';
 import AllowedEmails from './pages/Admin/AllowedEmails';
 import Stocks from './pages/Admin/Stocks';
 import Etfs from './pages/Admin/Etfs';
 import Bonds from './pages/Admin/Bonds';
 import MutualFunds from './pages/Admin/MutualFunds';
 import Industries from './pages/Admin/Industries';
-// import Maintenance from './pages/Admin/Maintenance';
-import AuditLogs from './pages/Admin/AuditLogs';
-import Strategies from './pages/Admin/Strategies';
-import ListStocks from './pages/ListStocks';
-import HoldingAccounts from './pages/Holdings/HoldingAccounts';
-import Scheduler from './pages/Admin/Schedular';
-import ListEtfs from './pages/ListEtfs';
-import UploadHoldings from './pages/Holdings/UploadHoldings';
-import ListHoldings from './pages/Holdings/ListHoldings';
-import StockHistory from './pages/StockHistory';
-import SectorAnalysis from './pages/SectorAnalysis';
-import StockSuggestions from './pages/StockSuggestions';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -188,6 +193,16 @@ const App: React.FC = () => {
                   <ViewerRoute>
                     <Layout>
                       <ListHoldings />
+                    </Layout>
+                  </ViewerRoute>
+                }
+              />
+              <Route
+                path="/holding-analysis/:accountId"
+                element={
+                  <ViewerRoute>
+                    <Layout>
+                      <HoldingAnalysis />
                     </Layout>
                   </ViewerRoute>
                 }

@@ -47,6 +47,8 @@ import {
     StockSuggestion,
     StockSuggestionCreate,
     StockSuggestionUpdate,
+    PortfolioBetaResponse,
+    CorrelationMatrixResponse,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -452,6 +454,32 @@ export const stockSuggestionsAPI = {
 
     delete: (id: number): Promise<AxiosResponse<void>> =>
         api.delete(`/api/stock-suggestions/${id}`),
+};
+
+// Holdings Analysis API
+export const holdingAnalysisAPI = {
+    /**
+     * Compute beta & correlation for all active INR holdings vs NIFTYBEES.
+     * Returns per-holding beta, portfolio beta, hedge lot suggestion,
+     * approximate margin required, and next Nifty expiry info.
+     *
+     * @param lookbackDays  180 = 6M | 365 = 1Y (default) | 730 = 2Y
+     */
+    getPortfolioBeta: (accountId: string, lookbackDays: number = 365) =>
+        api.get<PortfolioBetaResponse>(`/api/holding-analysis/${accountId}/beta`, {
+            params: { lookback_days: lookbackDays },
+        }),
+
+    /**
+     * Compute a pairwise correlation matrix across all active INR holdings.
+     * Values close to +1 → concentration risk (stocks moving together).
+     *
+     * @param lookbackDays  180 = 6M | 365 = 1Y (default) | 730 = 2Y
+     */
+    getCorrelationMatrix: (accountId: string, lookbackDays: number = 365) =>
+        api.get<CorrelationMatrixResponse>(`/api/holding-analysis/${accountId}/correlation`, {
+            params: { lookback_days: lookbackDays },
+        }),
 };
 
 export default api;
