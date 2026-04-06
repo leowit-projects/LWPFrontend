@@ -9,7 +9,6 @@ import {
   CircularProgress,
   ToggleButton,
   ToggleButtonGroup,
-  Tooltip,
   Divider,
   Grid,
 } from '@mui/material';
@@ -491,126 +490,111 @@ const HoldingAnalysis: React.FC = () => {
             </Box>
           </Paper>
 
-          {/* ── Correlation heatmap ──────────────────────────────────────── */}
+          {/* ── Correlation pairs table ──────────────────────────────────── */}
           <Paper>
             <Box sx={{ p: 2.5 }}>
               <Typography variant="subtitle1" fontWeight={600} mb={0.5}>
-                Holding Correlation Matrix
+                Holding Correlation Pairs
               </Typography>
               <Typography variant="caption" color="text.secondary" display="block" mb={2}>
-                Values close to <strong>+1.0</strong> (red) = stocks move together → concentration risk.
-                Values close to <strong>0</strong> or negative (green) = good diversification.
+                Showing significant pairs only — positive (&gt; 0.4) indicates concentration risk,
+                negative (&lt; −0.3) indicates good diversification.
               </Typography>
 
               {loadingCorr ? (
                 <Box display="flex" justifyContent="center" py={4}>
                   <CircularProgress size={28} />
                 </Box>
-              ) : corrData?.success && corrData.symbols.length >= 2 ? (
-                <Box sx={{ overflowX: 'auto' }}>
-                  <Box
-                    sx={{
-                      display: 'inline-grid',
-                      gridTemplateColumns: `120px repeat(${corrData.symbols.length}, minmax(60px, 80px))`,
-                      gap: '2px',
-                      minWidth: 'max-content',
-                    }}
-                  >
-                    {/* Top-left empty corner */}
-                    <Box />
+              ) : corrData?.success && corrData.symbols.length >= 2 ? (() => {
+                  // Build flat list of unique pairs (upper triangle only, skip diagonal)
+                  // filtered to |correlation| > 0.4 or < -0.3, sorted by correlation descending
+                  const pairs: { stock1: string; stock2: string; correlation: number }[] = [];
+                  corrData.symbols.forEach((sym1, i) => {
+                    corrData.symbols.forEach((sym2, j) => {
+                      if (j <= i) return;   // upper triangle only, skip diagonal
+                      const val = corrData.matrix[i][j];
+                      if (val > 0.4 || val < -0.3) {  // show only significant correlations
+                        pairs.push({ stock1: sym1, stock2: sym2, correlation: val });
+                      }
+                    });
+                  });
+                  pairs.sort((a, b) => b.correlation - a.correlation);
 
-                    {/* Column headers */}
-                    {corrData.symbols.map((sym) => (
-                      <Box
-                        key={sym}
-                        sx={{
-                          p: 0.75,
-                          textAlign: 'center',
-                          fontWeight: 600,
-                          fontSize: '0.7rem',
-                          color: 'text.secondary',
-                          borderBottom: '1px solid',
-                          borderColor: 'divider',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {sym}
-                      </Box>
-                    ))}
+                  if (pairs.length === 0) {
+                    return (
+                      <Alert severity="success">
+                        No significant correlations found. Your portfolio appears well diversified.
+                      </Alert>
+                    );
+                  }
 
-                    {/* Rows */}
-                    {corrData.symbols.map((rowSym, rowIdx) => (
-                      <React.Fragment key={rowSym}>
-                        {/* Row label */}
-                        <Box
-                          sx={{
-                            p: 0.75,
-                            display: 'flex',
-                            alignItems: 'center',
-                            fontWeight: 600,
-                            fontSize: '0.7rem',
-                            color: 'text.secondary',
-                            borderRight: '1px solid',
-                            borderColor: 'divider',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {rowSym}
-                        </Box>
-
-                        {/* Cells */}
-                        {corrData.matrix[rowIdx].map((val, colIdx) => (
-                          <Tooltip
-                            key={colIdx}
-                            title={`${rowSym} vs ${corrData.symbols[colIdx]}: ${val.toFixed(4)}`}
-                          >
-                            <Box
-                              sx={{
-                                p: 0.75,
-                                textAlign: 'center',
-                                backgroundColor: correlationToColor(val),
-                                color: correlationTextColor(val),
-                                fontSize: '0.7rem',
-                                fontWeight: rowIdx === colIdx ? 700 : 400,
-                                borderRadius: '3px',
-                                cursor: 'default',
-                                transition: 'opacity 0.15s',
-                                '&:hover': { opacity: 0.85 },
-                              }}
-                            >
-                              {val.toFixed(2)}
-                            </Box>
-                          </Tooltip>
-                        ))}
-                      </React.Fragment>
-                    ))}
-                  </Box>
-
-                  {/* Colour legend */}
-                  <Box display="flex" alignItems="center" gap={1} mt={2} flexWrap="wrap">
-                    <Typography variant="caption" color="text.secondary">Legend:</Typography>
-                    {[
-                      { color: '#2e7d32', label: '< −0.3 Strong negative' },
-                      { color: '#66bb6a', label: '−0.3 to 0 Negative' },
-                      { color: '#e8f5e9', label: '~0 No correlation' },
-                      { color: '#ffa726', label: '0.3 to 0.7 Moderate' },
-                      { color: '#f44336', label: '0.7 to 0.9 High' },
-                      { color: '#d32f2f', label: '> 0.9 Very high' },
-                    ].map(({ color, label }) => (
-                      <Box key={label} display="flex" alignItems="center" gap={0.5}>
-                        <Box sx={{ width: 14, height: 14, borderRadius: '2px', backgroundColor: color }} />
-                        <Typography variant="caption" color="text.secondary">{label}</Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-              ) : (
+                  return (
+                    <DataGrid
+                      rows={pairs}
+                      getRowId={(row) => `${row.stock1}-${row.stock2}`}
+                      autoHeight
+                      disableRowSelectionOnClick
+                      pageSizeOptions={[10, 25, 50]}
+                      initialState={{
+                        pagination: { paginationModel: { pageSize: 25, page: 0 } },
+                      }}
+                      sx={{ '& .MuiDataGrid-cell:focus': { outline: 'none' } }}
+                      columns={[
+                        {
+                          field: 'stock1',
+                          headerName: 'Stock 1',
+                          flex: 1,
+                          minWidth: 120,
+                          renderCell: (params: GridRenderCellParams) => (
+                            <Typography variant="body2" fontWeight={600}>{params.value}</Typography>
+                          ),
+                        },
+                        {
+                          field: 'stock2',
+                          headerName: 'Stock 2',
+                          flex: 1,
+                          minWidth: 120,
+                          renderCell: (params: GridRenderCellParams) => (
+                            <Typography variant="body2" fontWeight={600}>{params.value}</Typography>
+                          ),
+                        },
+                        {
+                          field: 'correlation',
+                          headerName: 'Correlation',
+                          flex: 0.8,
+                          minWidth: 130,
+                          align: 'center',
+                          headerAlign: 'center',
+                          renderCell: (params: GridRenderCellParams) => {
+                            const val = params.value as number;
+                            const bg  = correlationToColor(val);
+                            const fg  = correlationTextColor(val);
+                            return (
+                              <Box
+                                sx={{
+                                  px: 1.5,
+                                  py: 0.4,
+                                  borderRadius: 1,
+                                  backgroundColor: bg,
+                                  color: fg,
+                                  fontWeight: 700,
+                                  fontSize: '0.8rem',
+                                  minWidth: 60,
+                                  textAlign: 'center',
+                                }}
+                              >
+                                {val.toFixed(4)}
+                              </Box>
+                            );
+                          },
+                        },
+                      ]}
+                    />
+                  );
+                })()
+              : (
                 <Alert severity="info">
-                  {corrData?.error ?? 'Need at least 2 INR holdings with sufficient price history to show the correlation matrix.'}
+                  {corrData?.error ?? 'Need at least 2 INR holdings with sufficient price history.'}
                 </Alert>
               )}
             </Box>
