@@ -48,6 +48,7 @@ const HOLDING_TYPES_ORDER: ShareholdingType[] = [
 const HOLDING_TYPES_ORDER_INIT: ShareholdingType[] = [
   ShareholdingType.FIIs,
   ShareholdingType.DIIs,
+  ShareholdingType.PUBLIC,
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────

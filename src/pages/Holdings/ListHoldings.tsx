@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -12,6 +13,7 @@ import {
   Alert,
   AlertTitle,
   LinearProgress,
+  Link,
   Grid,
   Table,
   TableBody,
@@ -44,6 +46,8 @@ import {
   PieChart as PieChartIcon,
   AttachMoney,
   MonetizationOn,
+  PushPin,
+  PushPinOutlined,
   Delete,
   Lightbulb,
   Timeline,
@@ -169,6 +173,7 @@ const getAvgPriceBuySignal = (
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const formatCurrency = (value: number, currency: string): string => {
+  if (value == null || !isFinite(value)) return '—';
   if (currency === 'INR') {
     const isNeg = value < 0;
     const abs = Math.abs(value);
@@ -975,7 +980,25 @@ function StockRecommendationsTable({ recommendations, underSectors, stockSectorM
         const c = map[action as string] || { bg: '#f5f5f5', fg: '#555' };
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: '100%' }}>
-            <Typography variant="body2" fontWeight={700}>{p.value as string}</Typography>
+            <Link
+                component={RouterLink}
+                to={`/list-stocks/${p.value}/history`}
+                target="_blank"
+                rel="noopener noreferrer"
+                underline="hover"
+                sx={{
+                  fontWeight: 600,
+                  color: 'secondary.main',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    color: 'primary.dark',
+                  },
+                }}
+              >
+                <span>
+                    {p.value}
+                </span>
+              </Link>
             {priority && (<Chip label="▲" size="small" sx={{ height: 17, fontSize: '0.62rem', bgcolor: '#fff3e0', color: '#e65100', border: '1px solid #ffcc80' }} />)}
             <Chip label={action[0]} size="small" sx={{ bgcolor: c.bg, color: c.fg, fontWeight: 700 }} />
           </Box>
@@ -1026,6 +1049,40 @@ function StockRecommendationsTable({ recommendations, underSectors, stockSectorM
           <Typography variant="body2" fontWeight={700} color="primary">{p.value as number}</Typography>
         </Box>
       ),
+    },
+    {
+      field: 'pe_ratio',
+      headerName: 'P/E',
+      width: 100,
+      type: 'number',
+      renderCell: (p: GridRenderCellParams) => {
+        const pe = p.value as number | null;
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, height: '100%' }}>
+            <Typography variant="body2" color={pe !== null && pe > 0 ? 'text.primary' : 'text.secondary'} fontWeight={pe !== null && pe > 0 ? 700 : 400}>
+              {pe !== null && pe > 0 ? pe.toFixed(1) : 'N/A'}
+            </Typography>
+          </Box>
+          
+        );
+      },  
+    },
+    {
+      field: 'rsi_index',
+      headerName: 'RSI',
+      width: 100,
+      type: 'number',
+      renderCell: (p: GridRenderCellParams) => {
+        const rsi = p.value as number | null;
+        const color = rsi !== null ? (rsi < 30 ? 'success.main' : rsi > 70 ? 'error.main' : 'text.primary') : 'text.secondary';
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, height: '100%' }}>
+            <Typography variant="body2" color={color} fontWeight={rsi !== null ? 700 : 400}>
+              {rsi !== null ? rsi.toFixed(0) : 'N/A'}
+            </Typography>
+          </Box>
+        );
+      },  
     },
     {
       field: 'notes',
@@ -1138,10 +1195,147 @@ function StockRecommendationsTable({ recommendations, underSectors, stockSectorM
   );
 }
 
-function StockDetailsTable({ stocks, onDelete }: {
-  stocks: Array<{ id: number; symbol: string; name?: string | null; sector?: string | null; quantity: number; average_price: number; last_close_price?: number | null; price_52w_low?: number | null; price_52w_high?: number | null; moving_average_20?: number | null; moving_average_200?: number | null; invested_value: number; current_value: number; profit_loss: number; profit_loss_percentage: number; currency: string; updated_at: string; pe_ratio?: number | null; rsi_index?: number | null; }>;
+type SellAlertKey = 'PROFIT_10PCT' | 'RSI_OVERBOUGHT' | 'NEAR_52W_HIGH';
+
+const SELL_ALERT_META: Record<SellAlertKey, { label: string; color: 'error' | 'warning' | 'info'; tooltip: string }> = {
+  PROFIT_10PCT:   { label: '≥10% Profit',    color: 'error',   tooltip: 'Profit is 10% or more above avg buy price' },
+  RSI_OVERBOUGHT: { label: 'RSI > 70',        color: 'warning', tooltip: 'RSI above 70 — stock may be overbought' },
+  NEAR_52W_HIGH:  { label: 'Near 52W High',   color: 'info',    tooltip: 'Price is within 5% of the 52-week high' },
+};
+ 
+function PinnedForSellPanel({
+  stocks,
+  currency,
+}: {
+  stocks: Array<{
+    id: number; symbol: string; name?: string | null;
+    quantity: number; average_price: number; last_close_price?: number | null;
+    profit_loss_percentage: number; rsi_index?: number | null;
+    price_52w_high?: number | null; pin_to_sell?: boolean; sell_alerts?: string[];
+  }>;
+  currency: string;
+}) {
+  const pinned = stocks.filter((s) => s.pin_to_sell);
+  if (pinned.length === 0) return null;
+ 
+  return (
+    <Paper
+      variant="outlined"
+      sx={{ mb: 2, borderColor: 'warning.main', borderWidth: 1.5, borderRadius: 2, overflow: 'hidden' }}
+    >
+      {/* Header */}
+      <Box sx={{ px: 2, py: 1.25, display: 'flex', alignItems: 'center', gap: 1, bgcolor: '#fff8e1' }}>
+        <PushPin sx={{ color: 'warning.dark', fontSize: 18 }} />
+        <Typography variant="subtitle1" fontWeight={700} color="warning.dark">
+          Pinned for Sell
+        </Typography>
+        <Chip label={pinned.length} size="small" color="warning" sx={{ ml: 'auto', fontWeight: 700 }} />
+      </Box>
+ 
+      {/* Table */}
+      <TableContainer>
+        <Table size="small">
+          <TableHead>
+            <TableRow sx={{ bgcolor: '#fafafa' }}>
+              <TableCell sx={{ fontWeight: 700 }}>Symbol</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 700 }}>Qty</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 700 }}>Avg Price</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 700 }}>LTP</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 700 }}>P&L %</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 700 }}>RSI</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 700 }}>52W High</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Alerts</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {pinned.map((s) => {
+              const alerts = (s.sell_alerts ?? []) as SellAlertKey[];
+              const hasAlerts = alerts.length > 0;
+              return (
+                <TableRow
+                  key={s.id}
+                  sx={{ bgcolor: hasAlerts ? 'rgba(255,152,0,0.05)' : undefined, '&:last-child td': { border: 0 } }}
+                >
+                  <TableCell>
+                    <Typography variant="body2" fontWeight={700}>{s.symbol}</Typography>
+                    {s.name && <Typography variant="caption" color="text.secondary">{s.name}</Typography>}
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography variant="body2">{s.quantity.toLocaleString()}</Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography variant="body2">{formatCurrency(s.average_price, currency)}</Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography variant="body2">
+                      {s.last_close_price != null ? formatCurrency(s.last_close_price, currency) : '—'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography
+                      variant="body2"
+                      fontWeight={600}
+                      color={s.profit_loss_percentage >= 0 ? 'success.main' : 'error.main'}
+                    >
+                      {s.profit_loss_percentage >= 0 ? '+' : ''}{s.profit_loss_percentage.toFixed(2)}%
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography
+                      variant="body2"
+                      color={s.rsi_index != null && s.rsi_index > 70 ? 'warning.main' : 'text.primary'}
+                      fontWeight={s.rsi_index != null && s.rsi_index > 70 ? 700 : 400}
+                    >
+                      {s.rsi_index != null ? s.rsi_index.toFixed(1) : '—'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography variant="body2">
+                      {s.price_52w_high != null ? formatCurrency(s.price_52w_high, currency) : '—'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                      {alerts.length === 0 ? (
+                        <Typography variant="caption" color="text.disabled">Monitoring…</Typography>
+                      ) : (
+                        alerts.map((alert) => {
+                          const meta = SELL_ALERT_META[alert];
+                          return (
+                            <Tooltip key={alert} title={meta.tooltip} arrow>
+                              <Chip label={meta.label} size="small" color={meta.color} variant="outlined" />
+                            </Tooltip>
+                          );
+                        })
+                      )}
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Paper>
+  );
+}
+
+function StockDetailsTable({ stocks, onDelete, accountId, onRefresh }: {
+  stocks: Array<{
+    id: number; symbol: string; name?: string | null; sector?: string | null;
+    quantity: number; average_price: number; last_close_price?: number | null;
+    price_52w_low?: number | null; price_52w_high?: number | null;
+    moving_average_20?: number | null; moving_average_200?: number | null;
+    invested_value: number; current_value: number; profit_loss: number;
+    profit_loss_percentage: number; currency: string; updated_at: string;
+    pe_ratio?: number | null; rsi_index?: number | null;
+    pin_to_sell?: boolean;   // ← new
+    sell_alerts?: string[];  // ← new
+  }>;
   currency: string;
   onDelete: (id: number, name: string) => void;
+  accountId: string;      // ← new
+  onRefresh: () => void;  // ← new
 }) {
   type SortKey = 'symbol' | 'invested_value' | 'current_value' | 'profit_loss' | 'profit_loss_percentage' | 'quantity' | 'average_price' | '52w_position' | 'pe_ratio';
   const [sortBy, setSortBy] = useState<SortKey>('invested_value');
@@ -1149,6 +1343,19 @@ function StockDetailsTable({ stocks, onDelete }: {
   const [sectorFilter, setSectorFilter] = useState<string>('All');
   const [sectorButtonFilter, setSectorButtonFilter] = useState<string>('All');
   const [selectedStocks, setSelectedStocks] = useState<string[]>([]); 
+  const [pinLoading, setPinLoading] = useState<number | null>(null);
+
+  const handlePinToggle = async (holdingId: number, currentPin: boolean): Promise<void> => {
+    setPinLoading(holdingId);
+    try {
+      await holdingAccountsAPI.updatePinToSell(accountId, holdingId, !currentPin);
+      onRefresh();
+    } catch (err) {
+      console.error('Failed to toggle pin-to-sell:', err);
+    } finally {
+      setPinLoading(null);
+    }
+  };
 
   const handleSort = (col: SortKey) => {
     if (sortBy === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -1222,6 +1429,12 @@ function StockDetailsTable({ stocks, onDelete }: {
               <TableCell padding="checkbox">
                 <Checkbox checked={selectedStocks.length === filteredStocks.length && filteredStocks.length > 0} indeterminate={selectedStocks.length > 0 && selectedStocks.length < filteredStocks.length} onChange={(e) => { if (e.target.checked) { setSelectedStocks(filteredStocks.map(s => s.symbol)); } else { setSelectedStocks([]); } }} size="small" />
               </TableCell>
+              {/* ── Pin header ── */}
+              <TableCell padding="checkbox">
+                <Tooltip title="Pin for sell tracking" arrow>
+                  <PushPinOutlined fontSize="small" sx={{ color: 'text.secondary' }} />
+                </Tooltip>
+              </TableCell>
               <TableCell>{sortHeader('symbol', 'Symbol')}</TableCell>
               <TableCell><Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase">Sector</Typography></TableCell>
               <TableCell align="center">{sortHeader('52w_position', 'Last Close / 52W Range')}</TableCell>
@@ -1241,8 +1454,50 @@ function StockDetailsTable({ stocks, onDelete }: {
                 <TableCell padding="checkbox">
                   <Checkbox checked={selectedStocks.includes(s.symbol)} onChange={(e) => { if (e.target.checked) { setSelectedStocks([...selectedStocks, s.symbol]); } else { setSelectedStocks(selectedStocks.filter(sym => sym !== s.symbol)); } }} size="small" />
                 </TableCell>
+                
+                {/* ── Pin cell ── */}
+                <TableCell padding="checkbox">
+                  {pinLoading === s.id ? (
+                    <CircularProgress size={16} sx={{ display: 'block', m: 'auto' }} />
+                  ) : (
+                  <Tooltip
+                      title={s.pin_to_sell ? 'Unpin from sell tracking' : 'Pin for sell tracking'}
+                      arrow
+                    >
+                      <IconButton
+                        size="small"
+                        onClick={() => handlePinToggle(s.id, !!s.pin_to_sell)}
+                        sx={{
+                          color: s.pin_to_sell
+                          ? (s.sell_alerts?.length ? 'error.main' : 'warning.main')                 : 'action.disabled',
+                        }}
+                      >
+                      {s.pin_to_sell ? <PushPin fontSize="small" /> : <PushPinOutlined fontSize="small" />}
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </TableCell>
+
                 <TableCell>
-                  <Typography variant="body2" fontWeight={700}>{s.symbol}</Typography>
+                  <Link
+                    component={RouterLink}
+                    to={`/list-stocks/${s.symbol}/history`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    underline="hover"
+                    sx={{
+                      fontWeight: 600,
+                      color: 'secondary.main',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        color: 'primary.dark',
+                      },
+                    }}
+                  >
+                    <span>
+                        {s.symbol}
+                    </span>
+                  </Link> <br />
                   <Typography variant="caption" color={getDaysAgoColor(s.updated_at)}>{formatDaysAgo(s.updated_at)}</Typography>
                 </TableCell>
                 <TableCell>
@@ -1482,16 +1737,16 @@ const ListHoldings: React.FC = () => {
 
   const stockTotals = useMemo(() => {
     const stocks = holdings?.holdings.stocks ?? [];
-    return { invested: stocks.reduce((a, s) => a + s.invested_value, 0), current: stocks.reduce((a, s) => a + s.current_value, 0), pnl: stocks.reduce((a, s) => a + s.profit_loss, 0) };
+    return { invested: stocks.reduce((a, s) => a + (s.invested_value ?? 0), 0), current: stocks.reduce((a, s) => a + (s.current_value ?? 0), 0), pnl: stocks.reduce((a, s) => a + (s.profit_loss ?? 0), 0) };
   }, [holdings?.holdings.stocks]);
 
   const combinedTotals = useMemo(() => {
     const stocks = holdings?.holdings.stocks ?? [];
     const etfs = holdings?.holdings.etfs ?? [];
-    const stockInvested = stocks.reduce((a, s) => a + s.invested_value, 0);
-    const stockCurrent = stocks.reduce((a, s) => a + s.current_value, 0);
-    const etfInvested = etfs.reduce((a, e) => a + e.invested_value, 0);
-    const etfCurrent = etfs.reduce((a, e) => a + e.current_value, 0);
+    const stockInvested = stocks.reduce((a, s) => a + (s.invested_value ?? 0), 0);
+    const stockCurrent = stocks.reduce((a, s) => a + (s.current_value ?? 0), 0);
+    const etfInvested = etfs.reduce((a, e) => a + (e.invested_value ?? 0), 0);
+    const etfCurrent = etfs.reduce((a, e) => a + (e.current_value ?? 0), 0);
     const totalInvested = stockInvested + etfInvested;
     const totalCurrent = stockCurrent + etfCurrent;
     const totalPnl = totalCurrent - totalInvested;
@@ -1685,7 +1940,8 @@ const ListHoldings: React.FC = () => {
             </Grid>
             <Box sx={{ mb: 3 }}><SectorPnLChart stocks={stocks} currency={holdings.currency} /></Box>
             {holdings.recommendations && holdings.recommendations.length > 0 && (<StockRecommendationsTable recommendations={holdings.recommendations} underSectors={underSectors} stockSectorMap={stockSectorMap} currency={holdings.currency} recFilter={recFilter} onRecFilterChange={handleRecFilterChange} />)}
-            <StockDetailsTable stocks={stocks} currency={holdings.currency} onDelete={handleDeleteHolding} />
+            <PinnedForSellPanel stocks={stocks} currency={holdings.currency} />
+            <StockDetailsTable stocks={stocks} currency={holdings.currency} onDelete={handleDeleteHolding} accountId={accountId!} onRefresh={loadHoldings} />
           </>
         )}
       </TabPanel>

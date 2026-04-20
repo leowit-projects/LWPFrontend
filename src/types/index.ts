@@ -370,6 +370,9 @@ export interface StrategyUpdate {
     formula?: FormulaCriteria[];
 }
 
+// Holding Account types
+export type SellAlert = 'PROFIT_10PCT' | 'RSI_OVERBOUGHT' | 'NEAR_52W_HIGH';
+
 export interface HoldingAccount {
     account_id: string;
     user_id: number;
@@ -426,6 +429,9 @@ export interface HoldingDetail {
     profit_loss: number;
     profit_loss_percentage: number;
     notes?: string;
+    rsi_index?: number | null;
+    pin_to_sell?: boolean;
+    sell_alerts?: SellAlert[];
     created_at: string;
     updated_at: string;
 }

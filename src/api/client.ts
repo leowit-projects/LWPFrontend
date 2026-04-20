@@ -347,6 +347,16 @@ export const holdingAccountsAPI = {
     deleteHolding: (accountId: string, holdingId: number): Promise<AxiosResponse<{ message: string; holding_id: number; account_id: string }>> =>
         api.delete(`/api/holding-accounts/${accountId}/holdings/${holdingId}`),
 
+    updatePinToSell: (
+        accountId: string,
+        holdingId: number,
+        pinToSell: boolean,
+    ): Promise<AxiosResponse<{ holding_id: number; symbol: string; pin_to_sell: boolean }>> =>
+        api.patch(
+            `/api/holding-accounts/${accountId}/holdings/${holdingId}/pin-to-sell`,
+            { pin_to_sell: pinToSell },
+        ),
+
     uploadHoldings: (accountId: string, file: File): Promise<AxiosResponse<HoldingUploadResponse>> => {
         const formData = new FormData();
         formData.append('file', file);
