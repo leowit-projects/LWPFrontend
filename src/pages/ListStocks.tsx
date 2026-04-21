@@ -328,70 +328,33 @@ const ListStocks: React.FC = () => {
       },
     },
     {
-      field: 'price_last_close',
-      headerName: 'Last Close Price',
-      width: 140,
-      align: 'right',
-      headerAlign: 'right',
-      renderCell: (params: GridRenderCellParams) => {
-        const currencySymbol = getCurrencySymbol(params.row.currency);
-        const { price_last_close, price_52w_low, price_52w_high } = params.row;
-        const daysAgo = getDaysAgo(params.row.price_last_updated);
-
-        // Calculate position and color
-        let priceColor = 'text.primary';
-        if (price_last_close != null && price_52w_low != null && price_52w_high != null) {
-          const position = calculate52WeekPosition(price_last_close, price_52w_low, price_52w_high);
-          const colorType = getProgressColor(position);
-          priceColor = colorType === 'success' ? 'success.main' : 
-                       colorType === 'warning' ? 'warning.main' : 'error.main';
-        }
-        
-        return (
-          <Box>
-            <Box display="flex" alignItems="center" justifyContent="flex-end">
-              {params.value != null ? (
-                <>
-                  <Typography variant="body2" color="text.secondary" sx={{ mr: 0.3 }}>
-                    {currencySymbol}
-                  </Typography>
-                  <Typography variant="body2" fontWeight={700} color={priceColor}>
-                    {params.value.toFixed(2)}
-                  </Typography>
-                </>
-              ) : (
-                <Typography variant="body2">-</Typography>
-              )}
-            </Box>
-            <Typography 
-              variant="body2" 
-              sx={{ fontSize: '0.75rem' }}
-              color={'lightgrey'}
-            >
-              {daysAgo || 'No data'} 
-            </Typography>
-          </Box>
-
-
-        );
-      },
+      field: 'price_last_updated',
+      headerName: 'Last updated',
+      width: 120,
+      align: 'left',
+      headerAlign: 'left',
+      renderCell: (params: GridRenderCellParams) => (
+        <Typography variant="body2">
+          {params.value != null ? getDaysAgo(params.value) : '-'}
+        </Typography>
+      ),
     },
     {
       field: '52w_range',
-      headerName: '52w Range',
+      headerName: 'Last Close / 52w Range',
       headerAlign: 'center',
       width: 200,
       sortable: true,
       filterable: false,
       valueGetter: (_value: any, row: any) => {
-        const { price_last_close, price_52w_low, price_52w_high } = row;
+        const { price_last_close, price_52w_low, price_52w_high, currency } = row;
         if (price_last_close == null || price_52w_low == null || price_52w_high == null) {
           return null;
         }
         return calculate52WeekPosition(price_last_close, price_52w_low, price_52w_high);
       },
       renderCell: (params: GridRenderCellParams) => {
-        const { price_last_close, price_52w_low, price_52w_high } = params.row;
+        const { price_last_close, price_52w_low, price_52w_high, currency } = params.row;
         
         if (price_last_close == null || price_52w_low == null || price_52w_high == null) {
           return <Typography variant="caption" color="text.secondary">No data</Typography>;
@@ -405,13 +368,13 @@ const ListStocks: React.FC = () => {
             title={
               <Box>
                 <Typography variant="caption" display="block">
-                  Current: {price_last_close.toFixed(2)}
+                  Current: {getCurrencySymbol(currency)} {price_last_close.toFixed(2)}
                 </Typography>
                 <Typography variant="caption" display="block">
-                  52w Low: {price_52w_low.toFixed(2)}
+                  52w Low: {getCurrencySymbol(currency)} {price_52w_low.toFixed(2)}
                 </Typography>
                 <Typography variant="caption" display="block">
-                  52w High: {price_52w_high.toFixed(2)}
+                  52w High: {getCurrencySymbol(currency)} {price_52w_high.toFixed(2)}
                 </Typography>
                 <Typography variant="caption" display="block" fontWeight={600}>
                   Position: {position.toFixed(1)}%
@@ -421,6 +384,16 @@ const ListStocks: React.FC = () => {
             arrow
           >
             <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              <Typography variant="caption" fontSize="0.6rem" color="text.primary" textAlign="center">
+                <span style={{ fontWeight: 700 }}>
+                  {price_last_close ? getCurrencySymbol(currency) + ' ' + price_last_close.toFixed(2) : '—'}
+                </span>
+                {price_last_close && (
+                  <span style={{ fontWeight: 100 }}>
+                    {' (' + position.toFixed(1) + '%)'}
+                  </span>
+                )}
+              </Typography>
               <LinearProgress
                 variant="determinate"
                 value={position}
@@ -433,10 +406,10 @@ const ListStocks: React.FC = () => {
               />
               <Box display="flex" justifyContent="space-between">
                 <Typography variant="caption" fontSize="0.7rem" color="text.secondary" fontWeight={600}>
-                  {price_52w_low.toFixed(2)}
+                  {getCurrencySymbol(currency)} {price_52w_low.toFixed(2)}
                 </Typography>
                 <Typography variant="caption" fontSize="0.7rem" color="text.secondary" fontWeight={600}>
-                  {price_52w_high.toFixed(2)}
+                  {getCurrencySymbol(currency)} {price_52w_high.toFixed(2)}
                 </Typography>
               </Box>
             </Box>
@@ -540,6 +513,25 @@ const ListStocks: React.FC = () => {
             arrow
           >
             <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              {/* Labels */}
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Typography variant="caption" fontSize="0.65rem" color="text.secondary" fontWeight={600}>
+                  {minItem.label}
+                </Typography>
+                <Box 
+                  sx={{  
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  <Typography variant="caption" fontSize="0.6rem" color={signalColor} fontWeight={700}>
+                    {signalLabel}
+                  </Typography>
+                </Box>
+                <Typography variant="caption" fontSize="0.65rem" color="text.secondary" fontWeight={600}>
+                  {maxItem.label}
+                </Typography>
+              </Box>
               {/* Main progress bar */}
               <Box sx={{ position: 'relative', width: '100%', height: 8 }}>
                 <LinearProgress
@@ -571,30 +563,12 @@ const ListStocks: React.FC = () => {
                   }}
                 />
               </Box>
-              {/* Labels */}
-              <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="caption" fontSize="0.65rem" color="text.secondary" fontWeight={600}>
-                  {minItem.label}
-                </Typography>
-                <Box 
-                  sx={{  
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}
-                >
-                  <Typography variant="caption" fontSize="0.7rem" color={signalColor} fontWeight={700}>
-                    {signalLabel}
-                  </Typography>
-                </Box>
-                <Typography variant="caption" fontSize="0.65rem" color="text.secondary" fontWeight={600}>
-                  {maxItem.label}
-                </Typography>
-              </Box>
             </Box>
           </Tooltip>
         );
       },
     },
+
     {
       field: 'dividend_yield',
       headerName: 'Dividend Yield',

@@ -1507,7 +1507,16 @@ function StockDetailsTable({ stocks, onDelete, accountId, onRefresh }: {
                   {s.price_52w_low != null && s.price_52w_high != null && s.last_close_price != null ? (
                     <Tooltip title={<Box><Typography variant="caption" display="block">Current: {formatCurrency(s.last_close_price, s.currency)}</Typography><Typography variant="caption" display="block">52w Low: {formatCurrency(s.price_52w_low, s.currency)}</Typography><Typography variant="caption" display="block">52w High: {formatCurrency(s.price_52w_high, s.currency)}</Typography><Typography variant="caption" display="block" fontWeight={600}>Position: {calculate52WeekPosition(s.last_close_price, s.price_52w_low, s.price_52w_high).toFixed(1)}%</Typography></Box>} arrow>
                       <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 180 }}>
-                        <Typography variant="caption" fontSize="0.6rem" color="text.primary" fontWeight={700} textAlign="center">{s.last_close_price ? formatCurrency(s.last_close_price, s.currency) : '—'}</Typography>
+                        <Typography variant="caption" fontSize="0.6rem" color="text.primary" textAlign="center">
+                          <span style={{ fontWeight: 700 }}>
+                            {s.last_close_price ? formatCurrency(s.last_close_price, s.currency) : '—'}
+                          </span>
+                          {s.last_close_price && (
+                            <span style={{ fontWeight: 100 }}>
+                              {' (' + calculate52WeekPosition(s.last_close_price, s.price_52w_low, s.price_52w_high).toFixed(1) + '%)'}
+                            </span>
+                          )}
+                        </Typography>
                         <LinearProgress variant="determinate" value={calculate52WeekPosition(s.last_close_price, s.price_52w_low, s.price_52w_high)} color={getProgressColor(calculate52WeekPosition(s.last_close_price, s.price_52w_low, s.price_52w_high))} sx={{ height: 6, borderRadius: 1, backgroundColor: 'grey.300' }} />
                         <Box display="flex" justifyContent="space-between">
                           <Typography variant="caption" fontSize="0.6rem" color="text.secondary" fontWeight={500}>{formatCurrency(s.price_52w_low, s.currency)}</Typography>
