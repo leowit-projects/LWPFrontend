@@ -328,16 +328,32 @@ const ListStocks: React.FC = () => {
       },
     },
     {
-      field: 'price_last_updated',
-      headerName: 'Last updated',
+      field: 'price_last_close',
+      headerName: 'Last Close',
       width: 120,
       align: 'left',
       headerAlign: 'left',
-      renderCell: (params: GridRenderCellParams) => (
-        <Typography variant="body2">
-          {params.value != null ? getDaysAgo(params.value) : '-'}
-        </Typography>
-      ),
+      renderCell: (params: GridRenderCellParams) => {
+        const { price_last_close, price_52w_low, price_52w_high, currency, price_last_updated } = params.row;
+
+        if (price_last_close == null || price_52w_low == null || price_52w_high == null) {
+          return <Typography variant="caption" color="text.secondary">No data</Typography>;
+        }
+
+        const position = calculate52WeekPosition(price_last_close, price_52w_low, price_52w_high);
+        const color = getProgressColor(position);
+
+        return (
+          <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <Typography variant="body2" color={color} sx={{ fontWeight: 600 }}>
+              {params.value != null ? getCurrencySymbol(currency) + ' ' + price_last_close.toFixed(2) : '-'}
+            </Typography>
+            <Typography variant="caption" color="textSecondary">
+              {price_last_updated != null ? getDaysAgo(price_last_updated) : '-'}
+            </Typography>
+          </Box>
+        );
+      },
     },
     {
       field: '52w_range',
@@ -347,7 +363,7 @@ const ListStocks: React.FC = () => {
       sortable: true,
       filterable: false,
       valueGetter: (_value: any, row: any) => {
-        const { price_last_close, price_52w_low, price_52w_high, currency } = row;
+        const { price_last_close, price_52w_low, price_52w_high } = row;
         if (price_last_close == null || price_52w_low == null || price_52w_high == null) {
           return null;
         }
@@ -385,12 +401,9 @@ const ListStocks: React.FC = () => {
           >
             <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
               <Typography variant="caption" fontSize="0.6rem" color="text.primary" textAlign="center">
-                <span style={{ fontWeight: 700 }}>
-                  {price_last_close ? getCurrencySymbol(currency) + ' ' + price_last_close.toFixed(2) : '—'}
-                </span>
                 {price_last_close && (
                   <span style={{ fontWeight: 100 }}>
-                    {' (' + position.toFixed(1) + '%)'}
+                    {position.toFixed(1) + '%'}
                   </span>
                 )}
               </Typography>
