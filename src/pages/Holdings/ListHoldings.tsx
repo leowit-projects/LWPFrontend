@@ -767,7 +767,10 @@ function SectorPieChart({ stocks, currency }: { stocks: Array<{ sector?: string 
       const key = PIE_NAMED_SECTORS.includes(raw) ? raw : 'Others';
       map[key] = (map[key] || 0) + s.invested_value;
     });
-    const named = PIE_NAMED_SECTORS.filter((s) => s !== 'Others' && map[s] !== undefined).map((name) => ({ name, value: map[name] }));
+    const named = PIE_NAMED_SECTORS
+      .filter((s) => s !== 'Others' && map[s] !== undefined)
+      .map((name) => ({ name, value: map[name] }))
+      .sort((a, b) => b.value - a.value);;
     const others = map['Others'] ? [{ name: 'Others', value: map['Others'] }] : [];
     return [...named, ...others];
   }, [stocks]);
