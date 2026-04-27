@@ -109,7 +109,6 @@ const SECTOR_COLORS: Record<string, string> = {
   'Technology': '#abdda4',  // Indigo  — tech/digital
   'Others':            '#90a4ae',  // Grey    — neutral
 };
-const PIE_COLORS = Object.values(SECTOR_COLORS);
 
 const PIE_NAMED_SECTORS = [
   'Auto Ancillary',
@@ -759,50 +758,6 @@ function StockSummaryCards({ count, invested, current, pnl, currency }: {
   );
 }
 
-function SectorPieChart({ stocks, currency }: { stocks: Array<{ sector?: string | null; invested_value: number }>; currency: string; }) {
-  const data = useMemo(() => {
-    const map: Record<string, number> = {};
-    stocks.forEach((s) => {
-      const raw = s.sector || 'Others';
-      const key = PIE_NAMED_SECTORS.includes(raw) ? raw : 'Others';
-      map[key] = (map[key] || 0) + s.invested_value;
-    });
-    const named = PIE_NAMED_SECTORS
-      .filter((s) => s !== 'Others' && map[s] !== undefined)
-      .map((name) => ({ name, value: map[name] }))
-      .sort((a, b) => b.value - a.value);;
-    const others = map['Others'] ? [{ name: 'Others', value: map['Others'] }] : [];
-    return [...named, ...others];
-  }, [stocks]);
-  const total = data.reduce((a, d) => a + d.value, 0);
-  const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-    if (percent < 0.04) return null;
-    const R = Math.PI / 180;
-    const r = innerRadius + (outerRadius - innerRadius) * 0.5;
-    return (
-      <text x={cx + r * Math.cos(-midAngle * R)} y={cy + r * Math.sin(-midAngle * R)} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={700}>
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
-  };
-  return (
-    <Paper sx={{ p: 2, height: '100%', boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
-      <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <PieChartIcon fontSize="small" sx={{ color: '#667eea' }} /> Invested by Sector
-      </Typography>
-      <ResponsiveContainer width="100%" height={400}>
-        <PieChart>
-          <Pie data={data} cx="50%" cy="50%" outerRadius={150} dataKey="value" labelLine={false} label={renderLabel}>
-            {data.map((entry, i) => <Cell key={i} fill={SECTOR_COLORS[entry.name] ?? PIE_COLORS[i % PIE_COLORS.length]} />)}
-          </Pie>
-          <RechartsTooltip formatter={(val: any, name: any) => [`${formatCurrency(Number(val), currency)} (${((Number(val) / total) * 100).toFixed(1)}%)`, String(name)]} />
-          <Legend iconType="circle" iconSize={9} formatter={(value, entry: any) => <span style={{ fontSize: 11, color: '#555' }}>{value} — {formatCurrency(entry.payload.value, currency)}</span>} />
-        </PieChart>
-      </ResponsiveContainer>
-    </Paper>
-  );
-}
-
 function SectorPnLChart({ stocks, currency }: { stocks: Array<{ sector?: string | null; invested_value: number; current_value: number; profit_loss: number; }>; currency: string; }) {
   const data = useMemo(() => {
     const map: Record<string, { invested: number; current: number; pnl: number }> = {};
@@ -820,7 +775,7 @@ function SectorPnLChart({ stocks, currency }: { stocks: Array<{ sector?: string 
     }));
     const oth = map['Others'];
     const others = oth ? [{ name: 'Others', invested: round2(oth.invested), current: round2(oth.current), pnl: round2(oth.pnl), pnlPct: oth.invested > 0 ? parseFloat(((oth.pnl / oth.invested) * 100).toFixed(2)) : 0 }] : [];
-    return [...named, ...others];
+    return [...named.sort((a, b) => a.pnl - b.pnl), ...others];
   }, [stocks]);
 
   interface TooltipPayload { name: string; invested: number; current: number; pnl: number; pnlPct: number; }
@@ -895,7 +850,7 @@ function SectorAnalysisPanel({ analysis, currency, totalInvested }: { analysis: 
         </Alert>
       )}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-        {analysis.map((a) => (
+        {[...analysis].sort((a, b) => b.actualPct - a.actualPct).map((a) => (
           <Box key={a.sector}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.4 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -1947,10 +1902,14 @@ const ListHoldings: React.FC = () => {
           <>
             <StockSummaryCards count={stocks.length} invested={stockTotals.invested} current={stockTotals.current} pnl={stockTotals.pnl} currency={holdings.currency} />
             <Grid container spacing={2} sx={{ mb: 2 }}>
-              <Grid size={{ xs: 12, md: 6 }}><SectorPieChart stocks={stocks} currency={holdings.currency} /></Grid>
-              <Grid size={{ xs: 12, md: 6 }}><SectorAnalysisPanel analysis={sectorAnalysis} currency={holdings.currency} totalInvested={stockTotals.invested} /></Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <SectorAnalysisPanel analysis={sectorAnalysis} currency={holdings.currency} totalInvested={stockTotals.invested} />
+              </Grid>
+              <Grid size={{ xs: 12, md: 8 }}>
+                <SectorPnLChart stocks={stocks} currency={holdings.currency} />
+              </Grid>
             </Grid>
-            <Box sx={{ mb: 3 }}><SectorPnLChart stocks={stocks} currency={holdings.currency} /></Box>
+
             {holdings.recommendations && holdings.recommendations.length > 0 && (<StockRecommendationsTable recommendations={holdings.recommendations} underSectors={underSectors} stockSectorMap={stockSectorMap} currency={holdings.currency} recFilter={recFilter} onRecFilterChange={handleRecFilterChange} />)}
             <PinnedForSellPanel stocks={stocks} currency={holdings.currency} />
             <StockDetailsTable stocks={stocks} currency={holdings.currency} onDelete={handleDeleteHolding} accountId={accountId!} onRefresh={loadHoldings} />
