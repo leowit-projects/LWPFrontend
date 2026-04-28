@@ -99,17 +99,6 @@ const SECTOR_TARGETS: Record<string, number> = {
 const NAMED_SECTORS = Object.keys(SECTOR_TARGETS).filter((s) => s !== 'Others');
 const SECTOR_GAP_THRESHOLD_RATIO = 0.15;
 
-const SECTOR_COLORS: Record<string, string> = {
-  'Auto Ancillary':    '#f46d43',  // Orange  — mechanical/industrial
-  'Energy':            '#3288bd',  // Blue    — power & electric
-  'Finance':           '#66c2a5',  // Green   — money
-  'FMCG':              '#fee08b',  // Yellow  — consumer/sunny
-  'Healthcare':        '#d53e4f',  // Red     — medical cross
-  'Infrastructure':    '#5c53a5',  // Brown   — concrete & steel
-  'Technology': '#abdda4',  // Indigo  — tech/digital
-  'Others':            '#90a4ae',  // Grey    — neutral
-};
-
 const PIE_NAMED_SECTORS = [
   'Auto Ancillary',
   'Energy',
