@@ -798,16 +798,53 @@ function SectorPnLChart({ stocks, currency }: { stocks: Array<{ sector?: string 
       <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 0.5 }}>
         <TrendingUp fontSize="small" sx={{ color: '#43e97b' }} /> P&L by Sector
       </Typography>
-      <ResponsiveContainer width="100%" height={270}>
-        <BarChart data={data} margin={{ top: 24, right: 16, left: 10, bottom: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-          <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#555' }} axisLine={false} tickLine={false} />
-          <YAxis tickFormatter={(v: number) => formatCurrency(v, currency)} width={95} tick={{ fontSize: 11, fill: '#888' }} axisLine={false} tickLine={false} />
+      <ResponsiveContainer width="100%" height={550}>
+        <BarChart
+          data={data}
+          layout="vertical"
+          margin={{ top: 4, right: 60, left: 8, bottom: 4 }}>
+          <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#f0f0f0" />
+          <XAxis
+            type="number"
+            tickFormatter={(v: number) => formatCurrency(v, currency)}
+            tick={{ fontSize: 10, fill: '#888' }}
+            axisLine={false}
+            tickLine={false}
+            domain={([dataMin, dataMax]: readonly [number, number]) => {
+              const abs = Math.max(Math.abs(dataMin), Math.abs(dataMax)) * 1.25;
+              return [-abs, abs];
+            }} />
+          <YAxis
+            type="category"
+            dataKey="name"
+            width={100}
+            tick={{ fontSize: 12, fontWeight: 600, fill: '#444' }}
+            axisLine={false}
+            tickLine={false} />
           <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
-          <ReferenceLine y={0} stroke="#bbb" strokeWidth={1.5} />
-          <Bar dataKey="pnl" name="P&L" radius={[4, 4, 0, 0]} maxBarSize={80}>
-            {data.map((entry, i) => <Cell key={i} fill={entry.pnl >= 0 ? '#4caf50' : '#f44336'} fillOpacity={0.82} />)}
-            <LabelList dataKey="pnlPct" position="top" formatter={(v: any) => typeof v === 'number' ? `${v >= 0 ? '+' : ''}${v.toFixed(1)}%` : ''} style={{ fontSize: 11, fontWeight: 700, fill: '#444' }} />
+          <ReferenceLine x={0} stroke="#bbb" strokeWidth={1.5} />
+          <Bar dataKey="pnl" name="P&L" maxBarSize={28}>
+            {data.map((entry, i) => <Cell key={i} fill={entry.pnl >= 0 ? '#4caf50' : '#f44336'} fillOpacity={0.82} radius={4} />)}
+            <LabelList
+              dataKey="pnlPct"
+              content={(props: any) => {
+                const { x, y, width, height, value } = props;
+                if (value == null) return null;
+                const isPos = value >= 0;
+                return (
+                  <text
+                    x={isPos ? x + width + 5 : x - 5}
+                    y={y + height / 2}
+                    textAnchor={isPos ? 'start' : 'end'}
+                    dominantBaseline="central"
+                    fontSize={11}
+                    fontWeight={700}
+                    fill={isPos ? '#2e7d32' : '#c62828'}>
+                    {isPos ? '+' : ''}{value.toFixed(1)}%
+                  </text>
+                );
+              }}
+            />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -1890,11 +1927,11 @@ const ListHoldings: React.FC = () => {
         ) : (
           <>
             <StockSummaryCards count={stocks.length} invested={stockTotals.invested} current={stockTotals.current} pnl={stockTotals.pnl} currency={holdings.currency} />
-            <Grid container spacing={2} sx={{ mb: 2 }}>
-              <Grid size={{ xs: 12, md: 4 }}>
+            <Grid container spacing={2} sx={{ mb: 2, alignItems: 'stretch' }}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <SectorAnalysisPanel analysis={sectorAnalysis} currency={holdings.currency} totalInvested={stockTotals.invested} />
               </Grid>
-              <Grid size={{ xs: 12, md: 8 }}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <SectorPnLChart stocks={stocks} currency={holdings.currency} />
               </Grid>
             </Grid>
