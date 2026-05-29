@@ -1884,7 +1884,7 @@ const ListHoldings: React.FC = () => {
                         <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap">
                           <Typography variant="caption" fontWeight={700} color="success.main" sx={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>▲ Top Gainers</Typography>
                           {top3.map(s => (
-                            <Chip key={s.symbol} size="small" label={`${s.symbol} ${formatCurrency(s.profit_loss ?? 0, holdings.currency)} ( ${s.profit_loss_percentage?.toFixed(1)}% )`} sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, bgcolor: '#e8f5e9', color: '#2e7d32', border: '1px solid #a5d6a7' }} />
+                            <Chip key={s.symbol} size="small" label={`${s.symbol} ${formatCurrency(s.profit_loss ?? 0, holdings.currency)} (${s.profit_loss_percentage?.toFixed(1)}%)`} sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, bgcolor: '#e8f5e9', color: '#2e7d32', border: '1px solid #a5d6a7' }} />
                           ))}
                         </Box>
                       )}
@@ -1893,7 +1893,7 @@ const ListHoldings: React.FC = () => {
                         <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap">
                           <Typography variant="caption" fontWeight={700} color="error.main" sx={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>▼ Top Losers</Typography>
                           {bot3.map(s => (
-                            <Chip key={s.symbol} size="small" label={`${s.symbol} ${formatCurrency(s.profit_loss ?? 0, holdings.currency)} ( ${s.profit_loss_percentage?.toFixed(1)}% )`} sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, bgcolor: '#ffebee', color: '#c62828', border: '1px solid #ef9a9a' }} />
+                            <Chip key={s.symbol} size="small" label={`${s.symbol} ${formatCurrency(s.profit_loss ?? 0, holdings.currency)} (${s.profit_loss_percentage?.toFixed(1)}%)`} sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, bgcolor: '#ffebee', color: '#c62828', border: '1px solid #ef9a9a' }} />
                           ))}
                         </Box>
                       )}
