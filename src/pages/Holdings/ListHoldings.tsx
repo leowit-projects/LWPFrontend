@@ -1806,10 +1806,12 @@ const ListHoldings: React.FC = () => {
 
       {/* ── Stocks + ETFs Overview  &  Portfolio Allocation — side by side ── */}
       {(combinedTotals.stockCount > 0 || combinedTotals.etfCount > 0 || portfolioAllocation.length > 0) && (() => {
-        const stockPnl = combinedTotals.stockCurrent - combinedTotals.stockInvested;
-        const etfPnl   = combinedTotals.etfCurrent   - combinedTotals.etfInvested;
-        const chartData = [{ name: 'Stocks', invested: round2(combinedTotals.stockInvested), current: round2(combinedTotals.stockCurrent), pnl: round2(stockPnl) }, { name: 'ETFs', invested: round2(combinedTotals.etfInvested), current: round2(combinedTotals.etfCurrent), pnl: round2(etfPnl) }];
-        const C_INVESTED = '#667eea'; const C_CURRENT = '#4facfe'; const C_PNL_POS = '#43e97b'; const C_PNL_NEG = '#f5576c';
+        const stockProfit = round2(stocks.reduce((a, s) => a + (s.profit_loss > 0 ? s.profit_loss : 0), 0));
+        const stockLoss   = round2(stocks.reduce((a, s) => a + (s.profit_loss < 0 ? Math.abs(s.profit_loss) : 0), 0));
+        const etfProfit   = round2(etfs.reduce((a, e) => a + (e.profit_loss > 0 ? e.profit_loss : 0), 0));
+        const etfLoss     = round2(etfs.reduce((a, e) => a + (e.profit_loss < 0 ? Math.abs(e.profit_loss) : 0), 0));
+        const chartData = [{ name: 'Stocks', invested: round2(combinedTotals.stockInvested), current: round2(combinedTotals.stockCurrent), profit: stockProfit, loss: stockLoss }, { name: 'ETFs', invested: round2(combinedTotals.etfInvested), current: round2(combinedTotals.etfCurrent), profit: etfProfit, loss: etfLoss }];
+        const C_INVESTED = '#585858'; const C_CURRENT = '#4facfe'; const C_PNL_POS = '#1daa4c'; const C_PNL_NEG = '#f5576c';
         const fmt = (v: number) => formatCurrency(v, holdings.currency);
         const pnlPct = (pnl: number, inv: number) => inv > 0 ? ` (${pnl >= 0 ? '+' : ''}${((pnl / inv) * 100).toFixed(2)}%)` : '';
         const total = portfolioAllocation.reduce((a, d) => a + d.value, 0);
@@ -1817,8 +1819,9 @@ const ListHoldings: React.FC = () => {
           if (!active || !payload?.length) return null;
           const inv = payload.find((p: any) => p.dataKey === 'invested')?.value ?? 0;
           const cur = payload.find((p: any) => p.dataKey === 'current')?.value ?? 0;
-          const pnl = payload.find((p: any) => p.dataKey === 'pnl')?.value ?? 0;
-          return (<Paper sx={{ p: 1.25, minWidth: 200, boxShadow: 4, border: '1px solid', borderColor: 'divider' }}><Typography variant="subtitle2" fontWeight={700} mb={0.5}>{label}</Typography>{[{ label: 'Invested', value: fmt(inv), color: C_INVESTED }, { label: 'Current Value', value: fmt(cur), color: C_CURRENT }].map(row => (<Box key={row.label} display="flex" justifyContent="space-between" gap={2} mb={0.2}><Typography variant="caption" color="text.secondary">{row.label}</Typography><Typography variant="caption" fontWeight={700} color={row.color}>{row.value}</Typography></Box>))}<Divider sx={{ my: 0.5 }} /><Box display="flex" justifyContent="space-between" gap={2}><Typography variant="caption" color="text.secondary">P&amp;L</Typography><Typography variant="caption" fontWeight={700} color={pnl >= 0 ? 'success.main' : 'error.main'}>{pnl >= 0 ? '+' : ''}{fmt(pnl)}{pnlPct(pnl, inv)}</Typography></Box></Paper>);
+          const profit = payload.find((p: any) => p.dataKey === 'profit')?.value ?? 0;
+          const loss = payload.find((p: any) => p.dataKey === 'loss')?.value ?? 0;
+          return (<Paper sx={{ p: 1.25, minWidth: 200, boxShadow: 4, border: '1px solid', borderColor: 'divider' }}><Typography variant="subtitle2" fontWeight={700} mb={0.5}>{label}</Typography>{[{ label: 'Invested', value: fmt(inv), color: C_INVESTED }, { label: 'Current Value', value: fmt(cur), color: C_CURRENT }].map(row => (<Box key={row.label} display="flex" justifyContent="space-between" gap={2} mb={0.2}><Typography variant="caption" color="text.secondary">{row.label}</Typography><Typography variant="caption" fontWeight={700} color={row.color}>{row.value}</Typography></Box>))}<Divider sx={{ my: 0.5 }} />{profit > 0 && (<Box display="flex" justifyContent="space-between" gap={2} mb={0.2}><Typography variant="caption" color="text.secondary">Profit</Typography><Typography variant="caption" fontWeight={700} color="success.main">+{fmt(profit)}{pnlPct(profit, inv)}</Typography></Box>)}{loss > 0 && (<Box display="flex" justifyContent="space-between" gap={2}><Typography variant="caption" color="text.secondary">Loss</Typography><Typography variant="caption" fontWeight={700} color="error.main">-{fmt(loss)}{pnlPct(-loss, inv)}</Typography></Box>)}</Paper>);
         };
         return (
           <Box display="flex" gap={2} mb={2} flexWrap="wrap" alignItems="stretch">
@@ -1831,27 +1834,72 @@ const ListHoldings: React.FC = () => {
                   <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase" letterSpacing={0.5}>Stocks + ETFs Overview</Typography>
                   <Chip label={`${combinedTotals.stockCount} stocks · ${combinedTotals.etfCount} ETFs`} size="small" variant="outlined" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600, color: 'text.secondary' }} />
                 </Box>
+                {/* Row 1: Values + Bar chart */}
                 <Box display="flex" gap={0} flexWrap="wrap" alignItems="flex-start">
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pr: 3, mr: 3, borderRight: '1px solid', borderColor: 'divider', minWidth: 160 }}>
-                    <Box><Typography variant="caption" color="text.secondary" fontWeight={500}>Amount Invested</Typography><Typography variant="h6" fontWeight={700} lineHeight={1.2}>{fmt(combinedTotals.totalInvested)}</Typography></Box>
-                    <Box><Typography variant="caption" color="text.secondary" fontWeight={500}>Current Value</Typography><Typography variant="h6" fontWeight={700} lineHeight={1.2}>{fmt(combinedTotals.totalCurrent)}</Typography></Box>
-                    <Box><Typography variant="caption" color="text.secondary" fontWeight={500}>Total P&amp;L</Typography><Box display="flex" alignItems="baseline" gap={0.75}><Typography variant="h6" fontWeight={700} lineHeight={1.2} color={combinedTotals.totalPnl >= 0 ? 'success.main' : 'error.main'}>{combinedTotals.totalPnl >= 0 ? '+' : ''}{fmt(combinedTotals.totalPnl)}</Typography><Chip label={formatPercentage(combinedTotals.totalPnlPct)} size="small" color={combinedTotals.totalPnl >= 0 ? 'success' : 'error'} sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700 }} /></Box></Box>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pr: 3, mr: 3, borderRight: '1px solid', borderColor: 'divider', minWidth: 160 }}>
+                    <Box><Typography variant="caption" color="text.secondary" fontWeight={500}>Amount Invested</Typography><Typography variant="h5" fontWeight={700} lineHeight={1.2}>{fmt(combinedTotals.totalInvested)}</Typography></Box>
+                    <Box><Typography variant="caption" color="text.secondary" fontWeight={500}>Current Value</Typography><Typography variant="h5" fontWeight={700} lineHeight={1.2}>{fmt(combinedTotals.totalCurrent)}</Typography></Box>
+                    <Box><Typography variant="caption" color="text.secondary" fontWeight={500}>Total P&amp;L</Typography><Box display="flex" alignItems="baseline" gap={0.75}><Typography variant="h5" fontWeight={700} lineHeight={1.2} color={combinedTotals.totalPnl >= 0 ? 'success.main' : 'error.main'}>{combinedTotals.totalPnl >= 0 ? '+' : ''}{fmt(combinedTotals.totalPnl)}</Typography><Chip label={formatPercentage(combinedTotals.totalPnlPct)} size="small" color={combinedTotals.totalPnl >= 0 ? 'success' : 'error'} sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700 }} /></Box></Box>
                   </Box>
                   <Box sx={{ flex: 1, minWidth: 280 }}>
-                    <ResponsiveContainer width="100%" height={130}>
-                      <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 80, left: 8, bottom: 4 }} barCategoryGap="28%" barGap={3}>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 100, left: 0, bottom: 4 }} barCategoryGap="35%" barSize={15}>
                         <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis type="number" tickFormatter={(v: number) => formatCurrency(v, holdings.currency)} tick={{ display: 'none' }} axisLine={false} tickLine={false} />
+                        <XAxis type="number" domain={[0, 'auto']} tickFormatter={(v: number) => formatCurrency(v, holdings.currency)} tick={{ display: 'none' }} axisLine={false} tickLine={false} />
                         <YAxis type="category" dataKey="name" width={48} tick={{ fontSize: 12, fontWeight: 600, fill: '#444' }} axisLine={false} tickLine={false} />
                         <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
-                        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
-                        <Bar dataKey="invested" name="Invested" fill={C_INVESTED} radius={[0, 3, 3, 0]} barSize={14}><LabelList dataKey="invested" position="right" formatter={(v: any) => typeof v === 'number' ? fmt(v) : ''} style={{ fontSize: 10, fontWeight: 600, fill: C_INVESTED }} /></Bar>
-                        <Bar dataKey="current" name="Current" fill={C_CURRENT} radius={[0, 3, 3, 0]} barSize={14}><LabelList dataKey="current" position="right" formatter={(v: any) => typeof v === 'number' ? fmt(v) : ''} style={{ fontSize: 10, fontWeight: 600, fill: C_CURRENT }} /></Bar>
-                        <Bar dataKey="pnl" name="P&L" radius={[0, 3, 3, 0]} barSize={14}>{chartData.map((entry, i) => <Cell key={i} fill={entry.pnl >= 0 ? C_PNL_POS : C_PNL_NEG} />)}<LabelList dataKey="pnl" position="right" formatter={(v: any) => typeof v === 'number' ? `${v >= 0 ? '+' : ''}${fmt(v)}` : ''} style={{ fontSize: 10, fontWeight: 700, fill: '#555' }} /></Bar>
+                        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 3 }} />
+                        <Bar dataKey="invested" name="Invested" fill={C_INVESTED}><LabelList dataKey="invested" position="right" formatter={(v: any) => typeof v === 'number' ? fmt(v) : ''} style={{ fontSize: 9, fontWeight: 600, fill: C_INVESTED }} /></Bar>
+                        <Bar dataKey="current" name="Current" fill={C_CURRENT}><LabelList dataKey="current" position="right" formatter={(v: any) => typeof v === 'number' ? fmt(v) : ''} style={{ fontSize: 9, fontWeight: 600, fill: C_CURRENT }} /></Bar>
+                        <Bar dataKey="profit" name="Profit" fill={C_PNL_POS}>
+                          <LabelList dataKey="profit" 
+                            position="right" 
+                            content={(props: any) => { const { x, y, width, height, value, index } = props; if (typeof value !== 'number' || value <= 0) return null; const inv = chartData[index]?.invested ?? 0; const pct = inv > 0 ? ` (${((value / inv) * 100).toFixed(1)}%)` : ''; return <text x={x + width + 6} y={y + height / 2} 
+                            dominantBaseline="middle" 
+                            fontSize={9} 
+                            fontWeight={600} 
+                            fill={C_PNL_POS}>{`+${fmt(value)}${pct}`}</text>; }} />
+                        </Bar>
+                        <Bar dataKey="loss" name="Loss" fill={C_PNL_NEG}>
+                          <LabelList dataKey="loss" 
+                          position="right" 
+                          content={(props: any) => { const { x, y, width, height, value, index } = props; if (typeof value !== 'number' || value <= 0) return null; const inv = chartData[index]?.invested ?? 0; const pct = inv > 0 ? ` (${((value / inv) * 100).toFixed(1)}%)` : ''; return <text x={x + width + 6} y={y + height / 2} 
+                          dominantBaseline="middle" 
+                          fontSize={9} 
+                          fontWeight={600} 
+                          fill={C_PNL_NEG}>{`-${fmt(value)}${pct}`}</text>; }} />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </Box>
                 </Box>
+                {/* Row 2: Top 3 Gainers & Losers */}
+                {(() => {
+                  const top3 = [...stocks].filter(s => (s.profit_loss ?? 0) > 0).sort((a, b) => (b.profit_loss ?? 0) - (a.profit_loss ?? 0)).slice(0, 5);
+                  const bot3 = [...stocks].filter(s => (s.profit_loss ?? 0) < 0).sort((a, b) => (a.profit_loss ?? 0) - (b.profit_loss ?? 0)).slice(0, 5);
+                  if (top3.length === 0 && bot3.length === 0) return null;
+                  return (
+                    <Box display="flex" gap={2} mt={1.5} pt={1.5} sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+                      {top3.length > 0 && (
+                        <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap">
+                          <Typography variant="caption" fontWeight={700} color="success.main" sx={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>▲ Top Gainers</Typography>
+                          {top3.map(s => (
+                            <Chip key={s.symbol} size="small" label={`${s.symbol} ${formatCurrency(s.profit_loss ?? 0, holdings.currency)} ( ${s.profit_loss_percentage?.toFixed(1)}% )`} sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, bgcolor: '#e8f5e9', color: '#2e7d32', border: '1px solid #a5d6a7' }} />
+                          ))}
+                        </Box>
+                      )}
+                      {top3.length > 0 && bot3.length > 0 && <Divider orientation="vertical" flexItem />}
+                      {bot3.length > 0 && (
+                        <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap">
+                          <Typography variant="caption" fontWeight={700} color="error.main" sx={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>▼ Top Losers</Typography>
+                          {bot3.map(s => (
+                            <Chip key={s.symbol} size="small" label={`${s.symbol} ${formatCurrency(s.profit_loss ?? 0, holdings.currency)} ( ${s.profit_loss_percentage?.toFixed(1)}% )`} sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, bgcolor: '#ffebee', color: '#c62828', border: '1px solid #ef9a9a' }} />
+                          ))}
+                        </Box>
+                      )}
+                    </Box>
+                  );
+                })()}
               </Paper>
             )}
 
