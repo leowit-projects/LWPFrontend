@@ -72,6 +72,7 @@ export interface AllowedEmailCreate {
 export interface StockSymbol {
     symbol: string;
     name?: string;
+    promoter_names?: string[] | null;
     currency: CurrencyCode;
     exchange?: string;
     asset_type: AssetType;

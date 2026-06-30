@@ -88,12 +88,16 @@ const UploadHoldings: React.FC = () => {
   };
 
   const handleFileSelection = (file: File): void => {
-    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-      setError('Please select a valid CSV file');
+    const name = file.name.toLowerCase();
+    const okCsv = name.endsWith('.csv');
+    const okXlsx = name.endsWith('.xlsx');
+
+    if (isAionion ? !okXlsx : !okCsv) {
+      setError(`Please select a valid ${acceptLabel} file`);
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+    if (file.size > 10 * 1024 * 1024) {
       setError('File size must be less than 10MB');
       return;
     }
@@ -156,6 +160,10 @@ const UploadHoldings: React.FC = () => {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
+  const isAionion = account?.account_platform === 'AIONION';
+  const acceptExt = isAionion ? '.xlsx' : '.csv';
+  const acceptLabel = isAionion ? 'XLSX' : 'CSV';
+
   if (!account && !error) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -198,10 +206,10 @@ const UploadHoldings: React.FC = () => {
 
       <Paper sx={{ p: 4 }}>
         <Typography variant="h6" gutterBottom>
-          Upload CSV File
+          Upload {acceptLabel} File
         </Typography>
         <Typography variant="body2" color="text.secondary" paragraph>
-          Upload a CSV file containing your holdings data. The file should include columns for symbol, quantity, average price, and other relevant information.
+          Upload a {acceptLabel} file containing your holdings data. The file should include columns for symbol, quantity, average price, and other relevant information.
         </Typography>
 
         <Box
@@ -224,7 +232,7 @@ const UploadHoldings: React.FC = () => {
         >
           <input
             type="file"
-            accept=".csv"
+            accept={acceptExt}
             onChange={handleFileInputChange}
             style={{ display: 'none' }}
             id="file-upload"
@@ -233,7 +241,7 @@ const UploadHoldings: React.FC = () => {
           <label htmlFor="file-upload" style={{ cursor: 'pointer', width: '100%', display: 'block' }}>
             <CloudUpload sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
             <Typography variant="h6" gutterBottom>
-              {dragActive ? 'Drop file here' : 'Drag and drop CSV file here'}
+              {dragActive ? 'Drop file here' : `Drag and drop ${acceptLabel} file here`}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               or click to browse
@@ -329,14 +337,15 @@ const UploadHoldings: React.FC = () => {
           </Button>
         </Box>
 
+    {!isAionion && (
+      <>
         <Divider sx={{ my: 3 }} />
-
         <Alert severity="info" icon={<Info />}>
           <Typography variant="body2" fontWeight={600} gutterBottom>
-            CSV Format Requirements:
+            {acceptLabel} Format Requirements:
           </Typography>
           <Typography variant="body2" component="div">
-            Your CSV file should include the following columns:
+            Your {acceptLabel} file should include the following columns:
             <List dense sx={{ mt: 1 }}>
               <ListItem sx={{ py: 0 }}>
                 <ListItemText
@@ -365,6 +374,8 @@ const UploadHoldings: React.FC = () => {
             </List>
           </Typography>
         </Alert>
+      </> 
+      )}
       </Paper>
     </Container>
   );

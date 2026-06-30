@@ -146,6 +146,9 @@ export const stockAPI = {
     updatePurchaseQuantity: (symbol: string, purchase_quantity: number): Promise<AxiosResponse<StockSymbol>> =>
         api.patch<StockSymbol>(`/api/stocks/${symbol}/purchase-quantity`, { purchase_quantity }),
 
+    updatePromoters: (symbol: string, promoter_names: string[]): Promise<AxiosResponse<StockSymbol>> =>
+        api.patch<StockSymbol>(`/api/stocks/${symbol}/promoters`, { promoter_names }),
+
     delete: (symbol: string): Promise<AxiosResponse<{ message: string }>> =>
         api.delete(`/api/stocks/${symbol}`),
 };

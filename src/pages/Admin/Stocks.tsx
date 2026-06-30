@@ -20,7 +20,7 @@ import {
   Chip,
 } from '@mui/material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
-import { Add, Edit, Delete, FilterAlt } from '@mui/icons-material';
+import { Add, Edit, Delete, FilterAlt, Groups } from '@mui/icons-material';
 import { stockAPI, industriesAPI } from '../../api/client';
 import { StockSymbol, CurrencyCode, Industry } from '../../types';
 
@@ -37,6 +37,11 @@ const Stocks: React.FC = () => {
   const [selectedIndustry, setSelectedIndustry] = useState<string>('all');
   const [sectorButtonFilter, setSectorButtonFilter] = useState<string>('All');
   const [marketFilter, setMarketFilter] = useState<'All' | 'India' | 'US'>('All');
+  const [promoterDialogOpen, setPromoterDialogOpen] = useState<boolean>(false);
+  const [promoterStock, setPromoterStock] = useState<StockSymbol | null>(null);
+  const [promoterList, setPromoterList] = useState<string[]>([]);
+  const [promoterInput, setPromoterInput] = useState<string>('');
+  const [promoterSaving, setPromoterSaving] = useState<boolean>(false);
   const [formData, setFormData] = useState<any>({
     symbol: '',
     name: '',
@@ -246,6 +251,54 @@ const Stocks: React.FC = () => {
       alert(error.response?.data?.detail || 'Failed to update purchase quantity');
     }
   };
+
+  /**
+   * Promoter dialog handlers
+   */
+  const handleOpenPromoterDialog = (stock: StockSymbol): void => {
+    setPromoterStock(stock);
+    setPromoterList(stock.promoter_names ?? []);
+    setPromoterInput('');
+    setPromoterDialogOpen(true);
+  };
+
+  const handleClosePromoterDialog = (): void => {
+    setPromoterDialogOpen(false);
+    setPromoterStock(null);
+    setPromoterList([]);
+    setPromoterInput('');
+  };
+
+  const handleAddPromoter = (): void => {
+    const name = promoterInput.trim();
+    if (!name) return;
+    // case-insensitive dedupe
+    if (promoterList.some((p) => p.toLowerCase() === name.toLowerCase())) {
+      setPromoterInput('');
+      return;
+    }
+    setPromoterList([...promoterList, name]);
+    setPromoterInput('');
+  };
+
+  const handleRemovePromoter = (name: string): void => {
+    setPromoterList(promoterList.filter((p) => p !== name));
+  };
+
+  const handleSavePromoters = async (): Promise<void> => {
+    if (!promoterStock) return;
+    setPromoterSaving(true);
+    try {
+      await stockAPI.updatePromoters(promoterStock.symbol, promoterList);
+      handleClosePromoterDialog();
+      loadData();
+    } catch (error: any) {
+      console.error('Failed to update promoters:', error);
+      alert(error.response?.data?.detail || 'Failed to update promoters');
+    } finally {
+      setPromoterSaving(false);
+    }
+  };
   
   // Helper function to calculate days difference
   const getDaysAgo = (date: string | null): string => {
@@ -291,6 +344,24 @@ const Stocks: React.FC = () => {
       field: 'name', 
       headerName: 'Name', 
       width: 200
+    },
+    {
+      field: 'promoter_names',
+      headerName: 'Promoters',
+      width: 220,
+      sortable: false,
+      renderCell: (params: GridRenderCellParams) => {
+        const names: string[] = params.value ?? [];
+        if (names.length === 0) return <span style={{ color: '#999' }}>—</span>;
+        return (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'nowrap', overflow: 'hidden' }}>
+            {names.slice(0, 2).map((n) => (
+              <Chip key={n} label={n} size="small" variant="outlined" />
+            ))}
+            {names.length > 2 && <Chip label={`+${names.length - 2}`} size="small" />}
+          </Box>
+        );
+      },
     },
     {
       field: 'is_purchase_eligible',
@@ -374,6 +445,15 @@ const Stocks: React.FC = () => {
               disabled={!params.row.is_active}
             >
               <Delete fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Edit promoters">
+            <IconButton
+              size="small"
+              color="primary"
+              onClick={() => handleOpenPromoterDialog(params.row as StockSymbol)}
+            >
+              <Groups fontSize="small" />
             </IconButton>
           </Tooltip>
         </Box>
@@ -615,6 +695,66 @@ const Stocks: React.FC = () => {
             disabled={submitting}
           >
             {submitting ? 'Saving...' : editMode ? 'Update' : 'Add'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      /* Promoter Management Dialog *\/
+      <Dialog open={promoterDialogOpen} onClose={handleClosePromoterDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Promoters{promoterStock ? ` — ${promoterStock.symbol}` : ''}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+              <TextField
+                label="Add promoter"
+                value={promoterInput}
+                onChange={(e) => setPromoterInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddPromoter();
+                  }
+                }}
+                fullWidth
+                size="small"
+                placeholder="e.g. Tata Sons"
+                helperText="Press Enter or click Add"
+              />
+              <Button
+                onClick={handleAddPromoter}
+                variant="outlined"
+                disabled={!promoterInput.trim()}
+                sx={{ height: 40 }}
+              >
+                Add
+              </Button>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', minHeight: 40 }}>
+              {promoterList.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No promoters added yet.
+                </Typography>
+              ) : (
+                promoterList.map((name) => (
+                  <Chip
+                    key={name}
+                    label={name}
+                    onDelete={() => handleRemovePromoter(name)}
+                    color="primary"
+                    variant="outlined"
+                  />
+                ))
+              )}
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePromoterDialog} disabled={promoterSaving}>
+            Cancel
+          </Button>
+          <Button onClick={handleSavePromoters} variant="contained" disabled={promoterSaving}>
+            {promoterSaving ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>
