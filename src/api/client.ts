@@ -49,6 +49,7 @@ import {
     StockSuggestionUpdate,
     PortfolioBetaResponse,
     CorrelationMatrixResponse,
+    Tag,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -123,7 +124,7 @@ export const adminAPI = {
         api.post('/api/admin/trigger-recommendations'),
 
     triggerShareholdingIndia: (): Promise<AxiosResponse<ShareholdingRefreshResponse>> =>
-        api.post('/api/stocks/shareholding-india/refresh'),
+        api.post<ShareholdingRefreshResponse>('/api/stocks/shareholding-india/refresh'),
 };
 
 // Stock API
@@ -148,6 +149,9 @@ export const stockAPI = {
 
     updatePromoters: (symbol: string, promoter_names: string[]): Promise<AxiosResponse<StockSymbol>> =>
         api.patch<StockSymbol>(`/api/stocks/${symbol}/promoters`, { promoter_names }),
+
+    setTags: (symbol: string, tagIds: number[]): Promise<AxiosResponse<StockSymbol>> =>
+        api.put<StockSymbol>(`/api/stocks/${symbol}/tags`, { tag_ids: tagIds }),
 
     delete: (symbol: string): Promise<AxiosResponse<{ message: string }>> =>
         api.delete(`/api/stocks/${symbol}`),
@@ -493,6 +497,13 @@ export const holdingAnalysisAPI = {
         api.get<CorrelationMatrixResponse>(`/api/holding-analysis/${accountId}/correlation`, {
             params: { lookback_days: lookbackDays },
         }),
+};
+
+// Tags API
+export const tagsAPI = {
+    getAll: () => api.get<Tag[]>('/api/tags'),
+    create: (data: { name: string }) => api.post<Tag>('/api/tags', data),
+    delete: (id: number) => api.delete(`/api/tags/${id}`),
 };
 
 export default api;

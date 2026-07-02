@@ -328,6 +328,26 @@ const ListStocks: React.FC = () => {
       },
     },
     {
+      field: 'tags',
+      headerName: 'Tags',
+      width: 180,
+      sortable: false,
+      filterable: false,
+      renderCell: (params: GridRenderCellParams) => {
+        const tags: { id: number; name: string }[] = params.row.tags ?? [];
+        if (tags.length === 0) {
+          return <Typography variant="caption" color="text.disabled">—</Typography>;
+        }
+        return (
+          <Box display="flex" alignItems="center" gap={0.5} flexWrap="wrap">
+            {tags.map((t) => (
+              <Chip key={t.id} label={t.name} size="small" color="primary" />
+            ))}
+          </Box>
+        );
+      },
+    },
+    {
       field: 'price_last_close',
       headerName: 'Last Close',
       width: 120,
@@ -715,7 +735,6 @@ const ListStocks: React.FC = () => {
           <Chip 
             label={`🇮🇳 ${indiaStocks.length} · 🇺🇸 ${usStocks.length} of ${stocks.length} stocks`}
             color="primary"
-            variant="outlined"
           />
         </Box>
       </Box>
@@ -794,7 +813,6 @@ const ListStocks: React.FC = () => {
                 setSelectedIndustries(selectedIndustries.filter(i => i !== industry));
               }}
               color="primary"
-              variant="outlined"
             />
           ))}
           

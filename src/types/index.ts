@@ -77,6 +77,7 @@ export interface StockSymbol {
     exchange?: string;
     asset_type: AssetType;
     sector_industry?: string;
+    tags?: { id: number; name: string }[];
     is_active: boolean;
     is_purchase_eligible: boolean;
     purchase_quantity?: number;
@@ -790,4 +791,11 @@ export interface CorrelationMatrixResponse {
     symbols: string[];
     matrix: number[][];
     error: string | null;
+}
+
+export interface Tag {
+    id: number;
+    name: string;
+    created_at: string;
+    stock_symbols: string[];
 }

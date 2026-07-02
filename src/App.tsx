@@ -30,6 +30,7 @@ import Etfs from './pages/Admin/Etfs';
 import Bonds from './pages/Admin/Bonds';
 import MutualFunds from './pages/Admin/MutualFunds';
 import Industries from './pages/Admin/Industries';
+import Tags from './pages/Admin/tags';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -264,6 +265,16 @@ const App: React.FC = () => {
                   <AdminRoute>
                     <Layout>
                       <Industries />
+                    </Layout>
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/tags"
+                element={
+                  <AdminRoute>
+                    <Layout>
+                      <Tags />
                     </Layout>
                   </AdminRoute>
                 }

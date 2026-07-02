@@ -25,6 +25,7 @@ import {
   AccountBalance,
   Settings,
   Logout,
+  Label,
   ExpandLess,
   ExpandMore,
   Email,
@@ -106,6 +107,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const adminMenuItems = [
     { text: 'Allowed Emails', icon: <Email />, path: '/admin/allowed-emails' },
     { text: 'Industries', icon: <Category />, path: '/admin/industries' },
+    { text: 'Tags', icon: <Label />, path: '/admin/tags' },
     { text: 'Stocks', icon: <TrendingUp />, path: '/admin/stocks' },
     { text: 'ETFs', icon: <PieChart />, path: '/admin/etfs' },
     { text: 'Bonds', icon: <AccountBalance />, path: '/admin/bonds' },

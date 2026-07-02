@@ -18,11 +18,12 @@ import {
   Select,
   SelectChangeEvent,
   Chip,
+  Autocomplete,
 } from '@mui/material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
-import { Add, Edit, Delete, FilterAlt, Groups } from '@mui/icons-material';
-import { stockAPI, industriesAPI } from '../../api/client';
-import { StockSymbol, CurrencyCode, Industry } from '../../types';
+import { Add, Edit, Delete, FilterAlt, Groups, LocalOffer } from '@mui/icons-material';
+import { stockAPI, industriesAPI, tagsAPI } from '../../api/client';
+import { StockSymbol, CurrencyCode, Industry, Tag } from '../../types';
 
 const Stocks: React.FC = () => {
   const [stocks, setStocks] = useState<StockSymbol[]>([]);
@@ -42,6 +43,11 @@ const Stocks: React.FC = () => {
   const [promoterList, setPromoterList] = useState<string[]>([]);
   const [promoterInput, setPromoterInput] = useState<string>('');
   const [promoterSaving, setPromoterSaving] = useState<boolean>(false);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [tagDialogOpen, setTagDialogOpen] = useState<boolean>(false);
+  const [tagStock, setTagStock] = useState<StockSymbol | null>(null);
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [tagSaving, setTagSaving] = useState<boolean>(false);
   const [formData, setFormData] = useState<any>({
     symbol: '',
     name: '',
@@ -53,6 +59,7 @@ const Stocks: React.FC = () => {
   useEffect(() => {
     loadData();
     loadIndustries();
+    loadTags();
   }, []);
 
   useEffect(() => {
@@ -91,6 +98,15 @@ const Stocks: React.FC = () => {
       setIndustries(response.data);
     } catch (error) {
       console.error('Failed to load industries:', error);
+    }
+  };
+
+  const loadTags = async (): Promise<void> => {
+    try {
+      const response = await tagsAPI.getAll();
+      setAllTags(response.data);
+    } catch (error) {
+      console.error('Failed to load tags:', error);
     }
   };
 
@@ -299,6 +315,39 @@ const Stocks: React.FC = () => {
       setPromoterSaving(false);
     }
   };
+
+  /**
+   * Tag dialog handlers
+   */
+  const handleOpenTagDialog = (stock: StockSymbol): void => {
+    setTagStock(stock);
+    setSelectedTags((stock.tags ?? []) as Tag[]);
+    setTagDialogOpen(true);
+  };
+
+  const handleCloseTagDialog = (): void => {
+    setTagDialogOpen(false);
+    setTagStock(null);
+    setSelectedTags([]);
+  };
+
+  const handleSaveTags = async (): Promise<void> => {
+    if (!tagStock) return;
+    setTagSaving(true);
+    try {
+      await stockAPI.setTags(
+        tagStock.symbol,
+        selectedTags.map((t) => t.id)
+      );
+      handleCloseTagDialog();
+      loadData();
+    } catch (error: any) {
+      console.error('Failed to update tags:', error);
+      alert(error.response?.data?.detail || 'Failed to update tags');
+    } finally {
+      setTagSaving(false);
+    }
+  };
   
   // Helper function to calculate days difference
   const getDaysAgo = (date: string | null): string => {
@@ -359,6 +408,24 @@ const Stocks: React.FC = () => {
               <Chip key={n} label={n} size="small" variant="outlined" />
             ))}
             {names.length > 2 && <Chip label={`+${names.length - 2}`} size="small" />}
+          </Box>
+        );
+      },
+    },
+    {
+      field: 'tags',
+      headerName: 'Tags',
+      width: 220,
+      sortable: false,
+      renderCell: (params: GridRenderCellParams) => {
+        const tags: Tag[] = params.value ?? [];
+        if (tags.length === 0) return <span style={{ color: '#999' }}>—</span>;
+        return (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'nowrap', overflow: 'hidden' }}>
+            {tags.slice(0, 2).map((t) => (
+              <Chip key={t.id} label={t.name} size="small" variant="outlined" color="primary" />
+            ))}
+            {tags.length > 2 && <Chip label={`+${tags.length - 2}`} size="small" />}
           </Box>
         );
       },
@@ -454,6 +521,15 @@ const Stocks: React.FC = () => {
               onClick={() => handleOpenPromoterDialog(params.row as StockSymbol)}
             >
               <Groups fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Edit tags">
+            <IconButton
+              size="small"
+              color="primary"
+              onClick={() => handleOpenTagDialog(params.row as StockSymbol)}
+            >
+              <LocalOffer fontSize="small" />
             </IconButton>
           </Tooltip>
         </Box>
@@ -698,7 +774,7 @@ const Stocks: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      /* Promoter Management Dialog *\/
+      {/* Promoter Management Dialog */}
       <Dialog open={promoterDialogOpen} onClose={handleClosePromoterDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
           Promoters{promoterStock ? ` — ${promoterStock.symbol}` : ''}
@@ -755,6 +831,52 @@ const Stocks: React.FC = () => {
           </Button>
           <Button onClick={handleSavePromoters} variant="contained" disabled={promoterSaving}>
             {promoterSaving ? 'Saving...' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Tag Management Dialog */}
+      <Dialog open={tagDialogOpen} onClose={handleCloseTagDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Tags{tagStock ? ` — ${tagStock.symbol}` : ''}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <Autocomplete
+              multiple
+              options={allTags}
+              getOptionLabel={(option) => option.name}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              value={selectedTags}
+              onChange={(_, newValue) => setSelectedTags(newValue)}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip
+                    label={option.name}
+                    color="primary"
+                    variant="outlined"
+                    {...getTagProps({ index })}
+                    key={option.id}
+                  />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Assign tags"
+                  placeholder="Select tags"
+                  helperText="Pick from existing tags. Manage the tag list on the Tags admin page."
+                />
+              )}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseTagDialog} disabled={tagSaving}>
+            Cancel
+          </Button>
+          <Button onClick={handleSaveTags} variant="contained" disabled={tagSaving}>
+            {tagSaving ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>
