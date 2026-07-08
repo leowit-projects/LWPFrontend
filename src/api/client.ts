@@ -32,8 +32,10 @@ import {
     HoldingAccount,
     HoldingAccountCreate,
     HoldingAccountUpdate,
+    UserOption,
     HoldingUploadResponse,
     HoldingAccountsResponse,
+    AccountAssetSummary,
     AIInsightsResponse,
     TimeRange,
     AssetTypeParam,
@@ -125,6 +127,9 @@ export const adminAPI = {
 
     triggerShareholdingIndia: (): Promise<AxiosResponse<ShareholdingRefreshResponse>> =>
         api.post<ShareholdingRefreshResponse>('/api/stocks/shareholding-india/refresh'),
+
+    getActiveUsers: (): Promise<AxiosResponse<UserOption[]>> =>
+        api.get<UserOption[]>('/api/admin/active-users'),
 };
 
 // Stock API
@@ -328,10 +333,25 @@ export const strategiesAPI = {
 
 // Holding Accounts API
 export const holdingAccountsAPI = {
-    getAll: (includeInactive?: boolean): Promise<AxiosResponse<HoldingAccount[]>> =>
+    getAll: (
+        includeInactive?: boolean,
+        scope?: 'own' | 'all',
+    ): Promise<AxiosResponse<HoldingAccount[]>> =>
         api.get<HoldingAccount[]>('/api/holding-accounts', {
-            params: { include_inactive: includeInactive }
+            params: { include_inactive: includeInactive, scope }
         }),
+
+    getAssetSummary: (): Promise<AxiosResponse<AccountAssetSummary[]>> =>
+        api.get<AccountAssetSummary[]>('/api/holding-accounts/asset-summary'),
+
+    changeOwner: (
+        accountId: string,
+        newUserId: number,
+    ): Promise<AxiosResponse<HoldingAccount>> =>
+        api.patch<HoldingAccount>(
+            `/api/holding-accounts/${accountId}/owner`,
+            { new_user_id: newUserId },
+        ),
 
     getById: (accountId: string): Promise<AxiosResponse<HoldingAccount>> =>
         api.get<HoldingAccount>(`/api/holding-accounts/${accountId}`),

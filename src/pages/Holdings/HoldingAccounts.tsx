@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -31,17 +31,23 @@ import {
   Refresh,
   Upload,
   QueryStats,         // ← beta analysis icon
+  SwapHoriz,          // ← reassign owner icon
 } from '@mui/icons-material';
-import { holdingAccountsAPI } from '../../api/client';
-import { 
-  HoldingAccount, 
-  HoldingAccountCreate, 
-  AccountPlatform, 
-  CurrencyCode 
+import { holdingAccountsAPI, adminAPI } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
+import AssetSummary from '../../components/AssetSummary';
+import {
+  HoldingAccount,
+  HoldingAccountCreate,
+  AccountPlatform,
+  CurrencyCode,
+  UserOption,
 } from '../../types';
 
 const HoldingAccounts: React.FC = () => {
   const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
+
   const [accounts, setAccounts] = useState<HoldingAccount[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [openDialog, setOpenDialog] = useState<boolean>(false);
@@ -50,29 +56,49 @@ const HoldingAccounts: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
 
+  // ── Owner-reassignment (admin only) ──────────────────────────────────────
+  const [ownerDialogOpen, setOwnerDialogOpen] = useState<boolean>(false);
+  const [ownerTargetAccount, setOwnerTargetAccount] = useState<HoldingAccount | null>(null);
+  const [activeUsers, setActiveUsers] = useState<UserOption[]>([]);
+  const [selectedNewUserId, setSelectedNewUserId] = useState<number | ''>('');
+
   const [formData, setFormData] = useState<HoldingAccountCreate>({
     account_id: '',
     account_platform: AccountPlatform.ZERODHA,
     currency: CurrencyCode.INR,
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async (): Promise<void> => {
+  const loadData = useCallback(async (): Promise<void> => {
     setLoading(true);
     setError('');
     try {
-      const response = await holdingAccountsAPI.getAll(true);
+      // Admins pull the full set (own + others) via scope=all; everyone else
+      // gets only their own accounts. is_owner on each row drives the split.
+      const response = await holdingAccountsAPI.getAll(true, isAdmin ? 'all' : 'own');
       setAccounts(response.data);
-    } catch (error: any) {
-      console.error('Failed to load holding accounts:', error);
-      setError(error.response?.data?.detail || 'Failed to load holding accounts');
+    } catch (err: any) {
+      console.error('Failed to load holding accounts:', err);
+      setError(err.response?.data?.detail || 'Failed to load holding accounts');
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAdmin]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Resolve ownership: prefer backend is_owner, fall back to user_id match.
+  const isOwnedByMe = useCallback(
+    (account: HoldingAccount): boolean => {
+      if (typeof account.is_owner === 'boolean') return account.is_owner;
+      return !!user && account.user_id === user.id;
+    },
+    [user],
+  );
+
+  const myAccounts = accounts.filter(isOwnedByMe);
+  const otherAccounts = accounts.filter((a) => !isOwnedByMe(a));
 
   const handleOpenDialog = (account?: HoldingAccount): void => {
     if (account) {
@@ -135,9 +161,9 @@ const HoldingAccounts: React.FC = () => {
       }
       handleCloseDialog();
       await loadData();
-    } catch (error: any) {
-      console.error('Failed to save holding account:', error);
-      setError(error.response?.data?.detail || 'Failed to save holding account');
+    } catch (err: any) {
+      console.error('Failed to save holding account:', err);
+      setError(err.response?.data?.detail || 'Failed to save holding account');
     }
   };
 
@@ -149,9 +175,9 @@ const HoldingAccounts: React.FC = () => {
       await holdingAccountsAPI.delete(accountId);
       setSuccess(`Account ${accountId} deactivated successfully`);
       await loadData();
-    } catch (error: any) {
-      console.error('Failed to deactivate holding account:', error);
-      setError(error.response?.data?.detail || 'Failed to deactivate holding account');
+    } catch (err: any) {
+      console.error('Failed to deactivate holding account:', err);
+      setError(err.response?.data?.detail || 'Failed to deactivate holding account');
     }
   };
 
@@ -163,9 +189,9 @@ const HoldingAccounts: React.FC = () => {
       await holdingAccountsAPI.reactivate(accountId);
       setSuccess(`Account ${accountId} reactivated successfully`);
       await loadData();
-    } catch (error: any) {
-      console.error('Failed to reactivate holding account:', error);
-      setError(error.response?.data?.detail || 'Failed to reactivate holding account');
+    } catch (err: any) {
+      console.error('Failed to reactivate holding account:', err);
+      setError(err.response?.data?.detail || 'Failed to reactivate holding account');
     }
   };
 
@@ -178,6 +204,47 @@ const HoldingAccounts: React.FC = () => {
   // Only shown for active INR accounts (holding analysis is India-only).
   const handleHoldingAnalysis = (accountId: string): void => {
     window.open(`/holding-analysis/${accountId}`, '_blank', 'noopener,noreferrer');
+  };
+
+  // ── Owner reassignment (admin only) ──────────────────────────────────────
+  const handleOpenOwnerDialog = async (account: HoldingAccount): Promise<void> => {
+    setOwnerTargetAccount(account);
+    setSelectedNewUserId('');
+    setError('');
+    setSuccess('');
+    setOwnerDialogOpen(true);
+    try {
+      const response = await adminAPI.getActiveUsers();
+      setActiveUsers(response.data);
+    } catch (err: any) {
+      console.error('Failed to load active users:', err);
+      setError(err.response?.data?.detail || 'Failed to load users');
+    }
+  };
+
+  const handleCloseOwnerDialog = (): void => {
+    setOwnerDialogOpen(false);
+    setOwnerTargetAccount(null);
+    setSelectedNewUserId('');
+  };
+
+  const handleChangeOwner = async (): Promise<void> => {
+    if (!ownerTargetAccount || selectedNewUserId === '') {
+      setError('Please select a user');
+      return;
+    }
+    try {
+      await holdingAccountsAPI.changeOwner(
+        ownerTargetAccount.account_id,
+        Number(selectedNewUserId),
+      );
+      setSuccess(`Ownership of ${ownerTargetAccount.account_id} reassigned successfully`);
+      handleCloseOwnerDialog();
+      await loadData();
+    } catch (err: any) {
+      console.error('Failed to reassign owner:', err);
+      setError(err.response?.data?.detail || 'Failed to reassign owner');
+    }
   };
 
   const getPlatformColor = (platform: AccountPlatform): 'primary' | 'secondary' | 'success' | 'info' => {
@@ -198,7 +265,7 @@ const HoldingAccounts: React.FC = () => {
     });
   };
 
-  const columns: GridColDef[] = [
+  const buildColumns = (): GridColDef[] => [
     {
       field: 'account_id',
       headerName: 'Account ID',
@@ -243,6 +310,31 @@ const HoldingAccounts: React.FC = () => {
       ),
     },
     {
+      field: 'owner',
+      headerName: 'Owner',
+      flex: 1.2,
+      minWidth: 180,
+      // Owner name/email are joined by the backend; sortable by display name.
+      valueGetter: (_value, row) => (row as HoldingAccount).user_name || (row as HoldingAccount).user_email || '',
+      renderCell: (params: GridRenderCellParams) => {
+        const account = params.row as HoldingAccount;
+        const name = account.user_name || '—';
+        const email = account.user_email || '';
+        return (
+          <Box>
+            <Typography variant="body2" fontWeight={500}>
+              {name}
+            </Typography>
+            {email && (
+              <Typography variant="caption" color="text.secondary">
+                {email}
+              </Typography>
+            )}
+          </Box>
+        );
+      },
+    },
+    {
       field: 'is_active',
       headerName: 'Status',
       flex: 0.8,
@@ -273,7 +365,7 @@ const HoldingAccounts: React.FC = () => {
       type: 'actions',
       headerName: 'Actions',
       flex: 1,
-      minWidth: 180,
+      minWidth: 200,
       getActions: (params) => {
         const account = params.row as HoldingAccount;
         const isINR   = account.currency === CurrencyCode.INR;
@@ -322,6 +414,23 @@ const HoldingAccounts: React.FC = () => {
           />,
         ];
 
+        // ── Reassign Owner (admin only) ──────────────────────────────────────
+        if (isAdmin) {
+          actions.push(
+            <GridActionsCellItem
+              key="reassign"
+              icon={
+                <Tooltip title="Reassign Owner">
+                  <SwapHoriz fontSize="small" color="warning" />
+                </Tooltip>
+              }
+              label="Reassign Owner"
+              onClick={() => handleOpenOwnerDialog(account)}
+              showInMenu={false}
+            />
+          );
+        }
+
         // ── Deactivate / Reactivate ──────────────────────────────────────────
         if (account.is_active) {
           actions.push(
@@ -358,11 +467,37 @@ const HoldingAccounts: React.FC = () => {
     },
   ];
 
+  const columns = buildColumns();
+
+  const renderGrid = (rows: HoldingAccount[]) => (
+    <DataGrid
+      rows={rows}
+      columns={columns}
+      getRowId={(row) => row.account_id}
+      loading={loading}
+      autoHeight
+      pageSizeOptions={[10, 25, 50, 100]}
+      initialState={{
+        pagination: {
+          paginationModel: { pageSize: 25, page: 0 },
+        },
+      }}
+      disableRowSelectionOnClick
+      sx={{
+        '& .MuiDataGrid-cell:focus': { outline: 'none' },
+        '& .MuiDataGrid-row:hover': { cursor: 'pointer' },
+      }}
+    />
+  );
+
   return (
     <Container maxWidth="xl" sx={{ mt: 1, mb: 1 }}>
       <Typography variant="h6" fontWeight={700} mb={3}>
         Holding Accounts
       </Typography>
+
+      {/* ── Asset Summary (own active accounts, INR + USD tables) ──────────── */}
+      <AssetSummary />
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
@@ -376,13 +511,17 @@ const HoldingAccounts: React.FC = () => {
         </Alert>
       )}
 
-      <Paper>
+      {/* ── My Accounts ──────────────────────────────────────────────────── */}
+      <Paper sx={{ mb: 3 }}>
         <Box sx={{ p: 3 }}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Box display="flex" alignItems="center" gap={2}>
               <AccountBalance color="primary" />
+              <Typography variant="subtitle1" fontWeight={700}>
+                My Accounts
+              </Typography>
               <Typography variant="body2" color="text.secondary">
-                {accounts.length} account{accounts.length !== 1 ? 's' : ''}
+                {myAccounts.length} account{myAccounts.length !== 1 ? 's' : ''}
               </Typography>
             </Box>
 
@@ -402,26 +541,28 @@ const HoldingAccounts: React.FC = () => {
             </Box>
           </Box>
 
-          <DataGrid
-            rows={accounts}
-            columns={columns}
-            getRowId={(row) => row.account_id}
-            loading={loading}
-            autoHeight
-            pageSizeOptions={[10, 25, 50, 100]}
-            initialState={{
-              pagination: {
-                paginationModel: { pageSize: 25, page: 0 },
-              },
-            }}
-            disableRowSelectionOnClick
-            sx={{
-              '& .MuiDataGrid-cell:focus': { outline: 'none' },
-              '& .MuiDataGrid-row:hover': { cursor: 'pointer' },
-            }}
-          />
+          {renderGrid(myAccounts)}
         </Box>
       </Paper>
+
+      {/* ── Other Accounts (admin only) ──────────────────────────────────── */}
+      {isAdmin && (
+        <Paper>
+          <Box sx={{ p: 3 }}>
+            <Box display="flex" alignItems="center" gap={2} mb={2}>
+              <AccountBalance color="warning" />
+              <Typography variant="subtitle1" fontWeight={700}>
+                Other Accounts
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {otherAccounts.length} account{otherAccounts.length !== 1 ? 's' : ''}
+              </Typography>
+            </Box>
+
+            {renderGrid(otherAccounts)}
+          </Box>
+        </Paper>
+      )}
 
       {/* ── Add / Edit Dialog ──────────────────────────────────────────────── */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
@@ -488,6 +629,57 @@ const HoldingAccounts: React.FC = () => {
           <Button onClick={handleCloseDialog}>Cancel</Button>
           <Button onClick={handleSubmit} variant="contained">
             {editMode ? 'Update' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Reassign Owner Dialog (admin only) ─────────────────────────────── */}
+      <Dialog open={ownerDialogOpen} onClose={handleCloseOwnerDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Reassign Account Owner</DialogTitle>
+        <DialogContent>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Box sx={{ mt: 2 }}>
+            {ownerTargetAccount && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  Account: <strong>{ownerTargetAccount.account_id}</strong>
+                  <br />
+                  Current owner: {ownerTargetAccount.user_name || ownerTargetAccount.user_email || '—'}
+                </Typography>
+              </Alert>
+            )}
+
+            <TextField
+              select
+              label="New Owner"
+              value={selectedNewUserId}
+              onChange={(e) => setSelectedNewUserId(e.target.value === '' ? '' : Number(e.target.value))}
+              fullWidth
+              required
+              helperText="Select an active user to own this account"
+            >
+              {activeUsers.map((u) => (
+                <MenuItem key={u.id} value={u.id}>
+                  {u.name} ({u.email})
+                </MenuItem>
+              ))}
+            </TextField>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseOwnerDialog}>Cancel</Button>
+          <Button
+            onClick={handleChangeOwner}
+            variant="contained"
+            color="warning"
+            disabled={selectedNewUserId === ''}
+          >
+            Reassign
           </Button>
         </DialogActions>
       </Dialog>

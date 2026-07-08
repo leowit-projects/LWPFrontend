@@ -383,8 +383,15 @@ export interface HoldingAccount {
     account_platform: AccountPlatform;
     currency: CurrencyCode;
     is_active: boolean;
+    is_owner?: boolean;
     created_at: string;
     updated_at: string;
+}
+
+export interface UserOption {
+    id: number;
+    name: string;
+    email: string;
 }
 
 export interface HoldingAccountCreate {
@@ -798,4 +805,13 @@ export interface Tag {
     name: string;
     created_at: string;
     stock_symbols: string[];
+}
+
+export interface AccountAssetSummary {
+    holding_account_id: string;
+    account_platform: AccountPlatform;
+    currency: CurrencyCode;
+    asset_type: AssetType;
+    total_invested: number;
+    total_current: number | null;
 }
