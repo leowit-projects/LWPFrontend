@@ -173,6 +173,18 @@ export default function ListHoldingStocks({ stocks, currency, onDelete, accountI
     </TableSortLabel>
   );
 
+  const stickyCellStyle = {
+    position: 'sticky',
+    left: 0,
+    background: 'white', // Prevents underlying text from showing through
+    zIndex: 1,           // Ensures cell stays on top of scrolling content
+  };
+
+  const stickyHeaderStyle = {
+    ...stickyCellStyle,
+    zIndex: 2,           // Needs higher z-index than the body cells
+  };
+
   return (
     <Paper sx={{ mb: 3, boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
       <Box sx={{ p: 1.5, background: 'linear-gradient(90deg, #667eea, #764ba2)', borderRadius: '4px 4px 0 0', display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -248,9 +260,8 @@ export default function ListHoldingStocks({ stocks, currency, onDelete, accountI
                   <PushPinOutlined fontSize="small" sx={{ color: 'text.secondary' }} />
                 </Tooltip>
               </TableCell>
-              <TableCell>{sortHeader('symbol', 'Symbol')}</TableCell>
+              <TableCell sx={stickyHeaderStyle}>{sortHeader('symbol', 'Symbol')}</TableCell>
               <TableCell><Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase">Sector</Typography></TableCell>
-              {showFii && <TableCell align="center">{sortHeader('fii_change', 'FII 3Q')}</TableCell>}
               <TableCell align="center">{sortHeader('52w_position', 'Last Close / 52W Range')}</TableCell>
               <TableCell align="center">{sortHeader('pe_ratio', 'P/E')}</TableCell>
               <TableCell align="right">{sortHeader('quantity', 'Qty')}</TableCell>
@@ -259,6 +270,7 @@ export default function ListHoldingStocks({ stocks, currency, onDelete, accountI
               <TableCell align="right">{sortHeader('current_value', 'Current')}</TableCell>
               <TableCell align="right">{sortHeader('profit_loss', 'P&L')}</TableCell>
               <TableCell align="right">{sortHeader('profit_loss_percentage', 'P&L %')}</TableCell>
+              {showFii && <TableCell align="center">{sortHeader('fii_change', 'FII 3Q')}</TableCell>}
               <TableCell />
             </TableRow>
           </TableHead>
@@ -291,8 +303,7 @@ export default function ListHoldingStocks({ stocks, currency, onDelete, accountI
                     </Tooltip>
                   )}
                 </TableCell>
-
-                <TableCell>
+                <TableCell sx={stickyCellStyle}>
                   <Link
                     component={RouterLink}
                     to={`/list-stocks/${s.symbol}/history`}
@@ -324,41 +335,6 @@ export default function ListHoldingStocks({ stocks, currency, onDelete, accountI
                     </Box>
                   )}
                 </TableCell>
-                {showFii && (
-                  <TableCell align="center">
-                    {(() => {
-                      const trend = getFiiTrend(s.fii_shareholdings);
-                      if (!trend) return <Typography variant="caption" color="text.disabled">—</Typography>;
-                      const style = FII_TREND_STYLE[trend.direction];
-                      return (
-                        <Tooltip
-                          title={
-                            <Box>
-                              <Typography variant="caption" display="block" fontWeight={600}>FII holding</Typography>
-                              {trend.points.map((pt) => (
-                                <Typography key={pt.quarter} variant="caption" display="block">{pt.quarter}: {pt.percent.toFixed(2)}%</Typography>
-                              ))}
-                              {trend.points.length < 3 && (
-                                <Typography variant="caption" display="block" fontStyle="italic">Only {trend.points.length} quarters available</Typography>
-                              )}
-                              {trend.direction === 'MIXED' && (
-                                <Typography variant="caption" display="block" fontStyle="italic">Trend reversed within window</Typography>
-                              )}
-                            </Box>
-                          }
-                          arrow
-                        >
-                          <Box>
-                            <Typography variant="body2" fontWeight={700} sx={{ color: style.color }}>
-                              {style.arrow} {trend.change >= 0 ? '+' : ''}{trend.change.toFixed(1)}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">{trend.latest.toFixed(1)}%</Typography>
-                          </Box>
-                        </Tooltip>
-                      );
-                    })()}
-                  </TableCell>
-                )}
                 <TableCell>
                   {s.price_52w_low != null && s.price_52w_high != null && s.last_close_price != null ? (
                     <Tooltip title={<Box><Typography variant="caption" display="block">Current: {formatCurrency(s.last_close_price, s.currency)}</Typography><Typography variant="caption" display="block">52w Low: {formatCurrency(s.price_52w_low, s.currency)}</Typography><Typography variant="caption" display="block">52w High: {formatCurrency(s.price_52w_high, s.currency)}</Typography><Typography variant="caption" display="block" fontWeight={600}>Position: {calculate52WeekPosition(s.last_close_price, s.price_52w_low, s.price_52w_high).toFixed(1)}%</Typography></Box>} arrow>
@@ -407,6 +383,41 @@ export default function ListHoldingStocks({ stocks, currency, onDelete, accountI
                 <TableCell align="right"><Typography variant="body2">{formatCurrency(s.current_value, s.currency)}</Typography></TableCell>
                 <TableCell align="right"><Typography variant="body2" fontWeight={600} color={s.profit_loss >= 0 ? 'success.main' : 'error.main'}>{formatCurrency(s.profit_loss, s.currency)}</Typography></TableCell>
                 <TableCell align="right"><Chip label={formatPercentage(s.profit_loss_percentage)} color={getProfitLossColor(s.profit_loss)} size="small" /></TableCell>
+                {showFii && (
+                  <TableCell align="center">
+                    {(() => {
+                      const trend = getFiiTrend(s.fii_shareholdings);
+                      if (!trend) return <Typography variant="caption" color="text.disabled">—</Typography>;
+                      const style = FII_TREND_STYLE[trend.direction];
+                      return (
+                        <Tooltip
+                          title={
+                            <Box>
+                              <Typography variant="caption" display="block" fontWeight={600}>FII holding</Typography>
+                              {trend.points.map((pt) => (
+                                <Typography key={pt.quarter} variant="caption" display="block">{pt.quarter}: {pt.percent.toFixed(2)}%</Typography>
+                              ))}
+                              {trend.points.length < 3 && (
+                                <Typography variant="caption" display="block" fontStyle="italic">Only {trend.points.length} quarters available</Typography>
+                              )}
+                              {trend.direction === 'MIXED' && (
+                                <Typography variant="caption" display="block" fontStyle="italic">Trend reversed within window</Typography>
+                              )}
+                            </Box>
+                          }
+                          arrow
+                        >
+                          <Box>
+                            <Typography variant="body2" fontWeight={700} sx={{ color: style.color }}>
+                              {style.arrow} {trend.change >= 0 ? '+' : ''}{trend.change.toFixed(1)}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">{trend.latest.toFixed(1)}%</Typography>
+                          </Box>
+                        </Tooltip>
+                      );
+                    })()}
+                  </TableCell>
+                )}
                 <TableCell align="center"><IconButton size="small" color="error" onClick={() => onDelete(s.id, s.symbol)}><Delete fontSize="small" /></IconButton></TableCell>
               </TableRow>
             ))}

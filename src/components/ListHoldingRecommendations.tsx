@@ -152,16 +152,19 @@ export default function ListHoldingRecommendations({ recommendations, underSecto
         const pctLoss = avgPrice > 0 ? (avgPrice - lastClose) / avgPrice * 100 : null;
 
         return (
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', height: '100%' }}>
-            <Typography variant="body2" fontWeight={700} color="primary" noWrap>
-              {formatPrice(avgPrice, currency)} / {formatPrice(lastClose, currency)}
-            </Typography>
-            {pctLoss !== null && (
-              <Typography variant="caption" color={pctLoss > 0 ? 'error' : 'success.main'}>
-                {pctLoss > 0 ? '▼' : '▲'} {Math.abs(pctLoss).toFixed(1)}%
+          <Tooltip title={`Notes: ${p.row.notes || 'N/A'}`} 
+            placement="top" arrow>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', height: '100%' }}>
+              <Typography variant="body2" fontWeight={700} color="primary" noWrap>
+                {formatPrice(avgPrice, currency)} / {formatPrice(lastClose, currency)}
               </Typography>
-            )}
-          </Box>
+              {pctLoss !== null && (
+                <Typography variant="caption" color={pctLoss > 0 ? 'error' : 'success.main'}>
+                  {pctLoss > 0 ? '▼' : '▲'} {Math.abs(pctLoss).toFixed(1)}%
+                </Typography>
+              )}
+            </Box>
+          </Tooltip>
         );
       },
     },
@@ -233,33 +236,6 @@ export default function ListHoldingRecommendations({ recommendations, underSecto
           </Box>
         );
       },  
-    },
-    {
-      field: 'notes',
-      headerName: 'Notes',
-      flex: 1,
-      minWidth: 200,
-      sortable: false,
-      renderCell: (p: GridRenderCellParams) => {
-        const text = p.value as string | null;
-        if (!text) return <Typography variant="body2" color="text.disabled">—</Typography>;
-        const sentences = splitIntoSentences(text);
-        return (
-          <Tooltip title={text} placement="top-start" arrow>
-            <Typography 
-              variant="body2" 
-              color="text.secondary" 
-              sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'normal', maxWidth: '100%' }}>
-              {sentences.map((s, i) => (
-                <span key={i}>
-                  {s}
-                  {i < sentences.length - 1 && <br />}
-                </span>
-              ))}
-            </Typography>
-          </Tooltip>
-        );
-      },
     },
   ];
 
