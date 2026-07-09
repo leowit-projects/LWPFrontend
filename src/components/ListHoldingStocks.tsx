@@ -41,6 +41,35 @@ import { calculate52WeekPosition,
     formatDaysAgo, 
     getDaysAgoColor } from './HoldingsShared';
 
+// ─── FII 3-quarter trend ──────────────────────────────────────────────────────
+// Points arrive newest-first from the API. Change = latest − oldest (pp).
+// Direction: RISING/FALLING when every q-o-q move agrees; MIXED on reversal.
+interface FiiTrend {
+  change: number;
+  direction: 'RISING' | 'FALLING' | 'MIXED';
+  latest: number;
+  points: Array<{ quarter: string; percent: number }>;
+}
+
+const getFiiTrend = (points?: Array<{ quarter: string; percent: number }>): FiiTrend | null => {
+  if (!points || points.length < 2) return null;
+  const chrono = [...points.slice(0, 3)].reverse(); // oldest → newest
+  const change = chrono[chrono.length - 1].percent - chrono[0].percent;
+  const deltas = chrono.slice(1).map((pt, i) => pt.percent - chrono[i].percent);
+  const direction = deltas.every((d) => d > 0) ? 'RISING' : deltas.every((d) => d < 0) ? 'FALLING' : 'MIXED';
+  return { change, direction, latest: chrono[chrono.length - 1].percent, points: points.slice(0, 3) };
+};
+
+const FII_TREND_STYLE: Record<FiiTrend['direction'], { arrow: string; color: string }> = {
+  RISING: { arrow: '▲', color: '#2e7d32' },
+  FALLING: { arrow: '▼', color: '#d32f2f' },
+  MIXED: { arrow: '◆', color: '#f57f17' },
+};
+
+// Special values for the Tags filter menu
+const TAG_UNTAGGED = '(No tags)';
+const TAG_CLEAR = '__clear__';
+
 export default function ListHoldingStocks({ stocks, currency, onDelete, accountId, onRefresh }: {
   stocks: Array<{
     id: number; symbol: string; name?: string | null; sector?: string | null;
@@ -52,18 +81,21 @@ export default function ListHoldingStocks({ stocks, currency, onDelete, accountI
     pe_ratio?: number | null; rsi_index?: number | null;
     pin_to_sell?: boolean;   // ← new
     sell_alerts?: string[];  // ← new
+    tags?: string[];
+    fii_shareholdings?: Array<{ quarter: string; percent: number }>;
   }>;
   currency: string;
   onDelete: (id: number, name: string) => void;
   accountId: string;      // ← new
   onRefresh: () => void;  // ← new
 }) {
-  type SortKey = 'symbol' | 'invested_value' | 'current_value' | 'profit_loss' | 'profit_loss_percentage' | 'quantity' | 'average_price' | '52w_position' | 'pe_ratio';
+  type SortKey = 'symbol' | 'invested_value' | 'current_value' | 'profit_loss' | 'profit_loss_percentage' | 'quantity' | 'average_price' | '52w_position' | 'pe_ratio' | 'fii_change';
   const [sortBy, setSortBy] = useState<SortKey>('52w_position');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [sectorFilter, setSectorFilter] = useState<string>('All');
   const [positionSizeFilter, setPositionSizeFilter] = useState<string>('All');
   const [sectorButtonFilter, setSectorButtonFilter] = useState<string>('All');
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [selectedStocks, setSelectedStocks] = useState<string[]>([]); 
   const [pinLoading, setPinLoading] = useState<number | null>(null);
 
@@ -90,18 +122,36 @@ export default function ListHoldingStocks({ stocks, currency, onDelete, accountI
     return ['All', ...Array.from(set).sort()];
   }, [stocks]);
 
+  const tagOptions = useMemo(() => {
+    const set = new Set<string>();
+    stocks.forEach((s) => (s.tags ?? []).forEach((tag) => set.add(tag)));
+    return Array.from(set).sort();
+  }, [stocks]);
+
+  const showFii = currency === 'INR'; // screener.in shareholding data exists for Indian stocks only
+
   const positionSizeBrackets = currency === 'USD' ? POSITION_SIZE_BRACKETS.USD : POSITION_SIZE_BRACKETS.INR;
 
   const filteredByButton = sectorButtonFilter === 'All' ? stocks : sectorButtonFilter === 'Others' ? stocks.filter((s) => !['Finance', 'Auto Ancillary', 'FMCG', 'Healthcare', 'Technology', 'Energy', 'Infrastructure'].includes(s.sector || '')) : stocks.filter((s) => s.sector === sectorButtonFilter);
   const filteredBySector = sectorFilter === 'All' ? filteredByButton : filteredByButton.filter((s) => (s.sector || 'Unknown') === sectorFilter);
   const activeBracket = positionSizeFilter === 'All' ? null : positionSizeBrackets.find((b) => b.label === positionSizeFilter) ?? null;
-  const filteredStocks = activeBracket === null ? filteredBySector : filteredBySector.filter((s) => s.invested_value >= activeBracket.min && s.invested_value < activeBracket.max);
+  const filteredBySize = activeBracket === null ? filteredBySector : filteredBySector.filter((s) => s.invested_value >= activeBracket.min && s.invested_value < activeBracket.max);
+  const filteredStocks = tagFilter.length === 0 ? filteredBySize : filteredBySize.filter((s) => {
+    const stockTags = s.tags ?? [];
+    if (tagFilter.includes(TAG_UNTAGGED) && stockTags.length === 0) return true;
+    return stockTags.some((tag) => tagFilter.includes(tag));
+  });
   const sortedStocks = [...filteredStocks].sort((a, b) => {
     if (sortBy === 'symbol') { const cmp = (a.symbol ?? '').localeCompare(b.symbol ?? ''); return sortDir === 'asc' ? cmp : -cmp; }
     if (sortBy === '52w_position') {
       const posA = calculate52WeekPosition(a.last_close_price ?? null, a.price_52w_low ?? null, a.price_52w_high ?? null);
       const posB = calculate52WeekPosition(b.last_close_price ?? null, b.price_52w_low ?? null, b.price_52w_high ?? null);
       return sortDir === 'asc' ? posA - posB : posB - posA;
+    }
+    if (sortBy === 'fii_change') {
+      const fa = getFiiTrend(a.fii_shareholdings)?.change ?? Number.NEGATIVE_INFINITY;
+      const fb = getFiiTrend(b.fii_shareholdings)?.change ?? Number.NEGATIVE_INFINITY;
+      return sortDir === 'asc' ? fa - fb : fb - fa;
     }
     if (sortBy === 'pe_ratio') {
       const peA = a.pe_ratio ?? 0;
@@ -128,9 +178,39 @@ export default function ListHoldingStocks({ stocks, currency, onDelete, accountI
       <Box sx={{ p: 1.5, background: 'linear-gradient(90deg, #667eea, #764ba2)', borderRadius: '4px 4px 0 0', display: 'flex', alignItems: 'center', gap: 1 }}>
         <ShowChart sx={{ color: 'white', fontSize: 20 }} />
         <Typography variant="subtitle1" fontWeight={700} color="white">Stock Holdings</Typography>
-        <Chip label={(sectorFilter !== 'All' || sectorButtonFilter !== 'All' || positionSizeFilter !== 'All') ? `${sortedStocks.length} / ${stocks.length}` : stocks.length} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: 'white', fontWeight: 700, height: 20 }} />
+        <Chip label={(sectorFilter !== 'All' || sectorButtonFilter !== 'All' || positionSizeFilter !== 'All' || tagFilter.length > 0) ? `${sortedStocks.length} / ${stocks.length}` : stocks.length} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: 'white', fontWeight: 700, height: 20 }} />
         <Box sx={{ ml: 'auto', display: 'flex', gap: 1, alignItems: 'center' }}>
           {selectedStocks.length > 0 && (<Button variant="contained" size="small" onClick={handleGetSymbols} sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: 'white', fontWeight: 600, '&:hover': { bgcolor: 'rgba(255,255,255,0.35)' } }}>Get Symbols ({selectedStocks.length})</Button>)}
+          {tagOptions.length > 0 && (
+            <FormControl size="small" sx={{ minWidth: 130 }}>
+              <InputLabel sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem', '&.Mui-focused': { color: 'white' } }}>Tags</InputLabel>
+              <Select
+                multiple
+                value={tagFilter}
+                label="Tags"
+                onChange={(e) => {
+                  const value = typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value;
+                  setTagFilter(value.includes(TAG_CLEAR) ? [] : value);
+                }}
+                renderValue={(selected) => selected.length === 1 ? selected[0] : `${selected.length} tags`}
+                sx={{ color: 'white', fontSize: '0.82rem', '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.4)' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.7)' }, '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'white' }, '.MuiSvgIcon-root': { color: 'white' } }}
+              >
+                <MenuItem value={TAG_CLEAR} disabled={tagFilter.length === 0} sx={{ fontSize: '0.82rem', py: 0.5, fontWeight: 600, color: 'primary.main' }}>
+                  Clear filter
+                </MenuItem>
+                <MenuItem value={TAG_UNTAGGED} sx={{ fontSize: '0.82rem', py: 0.25 }}>
+                  <Checkbox checked={tagFilter.includes(TAG_UNTAGGED)} size="small" sx={{ py: 0.25 }} />
+                  <em>{TAG_UNTAGGED}</em>
+                </MenuItem>
+                {tagOptions.map((tag) => (
+                  <MenuItem key={tag} value={tag} sx={{ fontSize: '0.82rem', py: 0.25 }}>
+                    <Checkbox checked={tagFilter.includes(tag)} size="small" sx={{ py: 0.25 }} />
+                    {tag}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem', '&.Mui-focused': { color: 'white' } }}>Position Size</InputLabel>
             <Select value={positionSizeFilter} label="Position Size" onChange={(e) => setPositionSizeFilter(e.target.value)} sx={{ color: 'white', fontSize: '0.82rem', '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.4)' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.7)' }, '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'white' }, '.MuiSvgIcon-root': { color: 'white' } }}>
@@ -170,6 +250,7 @@ export default function ListHoldingStocks({ stocks, currency, onDelete, accountI
               </TableCell>
               <TableCell>{sortHeader('symbol', 'Symbol')}</TableCell>
               <TableCell><Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase">Sector</Typography></TableCell>
+              {showFii && <TableCell align="center">{sortHeader('fii_change', 'FII 3Q')}</TableCell>}
               <TableCell align="center">{sortHeader('52w_position', 'Last Close / 52W Range')}</TableCell>
               <TableCell align="center">{sortHeader('pe_ratio', 'P/E')}</TableCell>
               <TableCell align="right">{sortHeader('quantity', 'Qty')}</TableCell>
@@ -235,7 +316,49 @@ export default function ListHoldingStocks({ stocks, currency, onDelete, accountI
                 </TableCell>
                 <TableCell>
                   {s.sector ? <Chip label={s.sector} size="small" sx={{ height: 19, fontSize: '0.68rem' }} /> : <Typography variant="body2" color="text.disabled">—</Typography>}
+                  {(s.tags ?? []).length > 0 && (
+                    <Box sx={{ display: 'flex', gap: 0.4, flexWrap: 'wrap', mt: 0.4 }}>
+                      {(s.tags ?? []).map((tag) => (
+                        <Chip key={tag} label={tag} size="small" variant="outlined" sx={{ height: 16, fontSize: '0.6rem', color: 'text.secondary', '& .MuiChip-label': { px: 0.7 } }} />
+                      ))}
+                    </Box>
+                  )}
                 </TableCell>
+                {showFii && (
+                  <TableCell align="center">
+                    {(() => {
+                      const trend = getFiiTrend(s.fii_shareholdings);
+                      if (!trend) return <Typography variant="caption" color="text.disabled">—</Typography>;
+                      const style = FII_TREND_STYLE[trend.direction];
+                      return (
+                        <Tooltip
+                          title={
+                            <Box>
+                              <Typography variant="caption" display="block" fontWeight={600}>FII holding</Typography>
+                              {trend.points.map((pt) => (
+                                <Typography key={pt.quarter} variant="caption" display="block">{pt.quarter}: {pt.percent.toFixed(2)}%</Typography>
+                              ))}
+                              {trend.points.length < 3 && (
+                                <Typography variant="caption" display="block" fontStyle="italic">Only {trend.points.length} quarters available</Typography>
+                              )}
+                              {trend.direction === 'MIXED' && (
+                                <Typography variant="caption" display="block" fontStyle="italic">Trend reversed within window</Typography>
+                              )}
+                            </Box>
+                          }
+                          arrow
+                        >
+                          <Box>
+                            <Typography variant="body2" fontWeight={700} sx={{ color: style.color }}>
+                              {style.arrow} {trend.change >= 0 ? '+' : ''}{trend.change.toFixed(1)}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">{trend.latest.toFixed(1)}%</Typography>
+                          </Box>
+                        </Tooltip>
+                      );
+                    })()}
+                  </TableCell>
+                )}
                 <TableCell>
                   {s.price_52w_low != null && s.price_52w_high != null && s.last_close_price != null ? (
                     <Tooltip title={<Box><Typography variant="caption" display="block">Current: {formatCurrency(s.last_close_price, s.currency)}</Typography><Typography variant="caption" display="block">52w Low: {formatCurrency(s.price_52w_low, s.currency)}</Typography><Typography variant="caption" display="block">52w High: {formatCurrency(s.price_52w_high, s.currency)}</Typography><Typography variant="caption" display="block" fontWeight={600}>Position: {calculate52WeekPosition(s.last_close_price, s.price_52w_low, s.price_52w_high).toFixed(1)}%</Typography></Box>} arrow>

@@ -445,10 +445,17 @@ export interface HoldingDetail {
     updated_at: string;
 }
 
+export interface FiiShareholdingPoint {
+    quarter: string;   // "YYYY-Q#", newest first in API responses
+    percent: number;
+}
+
 export interface StockHoldingDetail extends HoldingDetail {
     symbol: string;
     name?: string;
     exchange?: string;
+    tags?: string[];
+    fii_shareholdings?: FiiShareholdingPoint[];
 }
 
 export interface ETFHoldingDetail extends HoldingDetail {
