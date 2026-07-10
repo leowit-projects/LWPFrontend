@@ -71,11 +71,11 @@ export default function ListHoldingRecommendations({ recommendations, underSecto
     navigator.clipboard.writeText(lines.join('\n')).then(() => setCopySnackbar(true));
   };
 
-  const splitIntoSentences = (text: string) =>
-    text
-      .split(/(?<=[.!?])\s+(?=[A-Z])/)
-      .map(s => s.trim())
-      .filter(Boolean);
+  // const splitIntoSentences = (text: string) =>
+  //   text
+  //     .split(/(?<=[.!?])\s+(?=[A-Z])/)
+  //     .map(s => s.trim())
+  //     .filter(Boolean);
 
   const allColumns: GridColDef[] = [
     {
