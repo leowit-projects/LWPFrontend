@@ -82,10 +82,13 @@ export interface StockSymbol {
     is_purchase_eligible: boolean;
     purchase_quantity?: number;
     price_last_close?: number;
+    price_last_updated?: string;
     price_52w_low?: number;
     price_52w_high?: number;
+    book_value?: number;
     eps?: number;
     pe_ratio?: number;
+    pb_ratio?: number;
     peg_index?: number;
     pegy_index?: number;
     dividend_yield?: number;

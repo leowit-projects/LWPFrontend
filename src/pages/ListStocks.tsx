@@ -117,6 +117,45 @@ const getCurrencySymbol = (currency: string): string => {
   }
 };
 
+// Typical P/E ranges by sector, used to flag Low (cheap) / Fair / High (expensive).
+// Matched loosely by keyword against each stock's sector so it's resilient to naming variations.
+const SECTOR_PE_BANDS: { keywords: string[]; low: number; high: number }[] = [
+  { keywords: ['financ', 'bank'], low: 10, high: 15 },
+  { keywords: ['util'], low: 10, high: 20 },
+  { keywords: ['health'], low: 15, high: 25 },
+  { keywords: ['consumer', 'fmcg'], low: 15, high: 25 },
+  { keywords: ['tech'], low: 20, high: 40 },
+];
+// Fallback P/E band for any sector not covered above
+const DEFAULT_PE_BAND = { low: 15, high: 25 };
+// Universal P/B band (low/fair/high) — not wired up yet, coloring for P/B is coming later
+// const PB_BAND = { low: 1, high: 3 };
+
+const getPEBand = (sector?: string | null): { low: number; high: number } => {
+  if (!sector) return DEFAULT_PE_BAND;
+  const s = sector.toLowerCase();
+  const match = SECTOR_PE_BANDS.find((b) => b.keywords.some((k) => s.includes(k)));
+  return match ?? DEFAULT_PE_BAND;
+};
+
+type ValuationLevel = 'low' | 'fair' | 'high' | null;
+
+const classifyValuation = (
+  value: number | null | undefined,
+  band: { low: number; high: number }
+): ValuationLevel => {
+  if (value == null || value <= 0) return null;
+  if (value < band.low) return 'low';
+  if (value > band.high) return 'high';
+  return 'fair';
+};
+
+const VALUATION_COLOR: Record<'low' | 'fair' | 'high', string> = {
+  low: 'info.main',      // Undervalued
+  fair: 'success.main',  // Within range
+  high: 'error.main',    // Overvalued
+};
+
 const ListStocks: React.FC = () => {
   const [stocks, setStocks] = useState<StockSymbol[]>([]);
   const [filteredStocks, setFilteredStocks] = useState<StockSymbol[]>([]);
@@ -615,8 +654,55 @@ const ListStocks: React.FC = () => {
       ),
     },
     {
+      field: 'eps',
+      headerName: 'EPS',
+      width: 100,
+      align: 'right',
+      headerAlign: 'right',
+      renderCell: (params: GridRenderCellParams) => (
+        <Typography variant="body2">
+          {params.value != null ? `${getCurrencySymbol(params.row.currency)} ${params.value.toFixed(2)}` : '-'}
+        </Typography>
+      ),
+    },
+    {
       field: 'pe_ratio',
       headerName: 'P/E',
+      width: 90,
+      align: 'right',
+      headerAlign: 'right',
+      renderCell: (params: GridRenderCellParams) => {
+        const sector = (params.row.sector_industry as string | undefined)?.split(' - ')[0];
+        const band = getPEBand(sector);
+        const level = classifyValuation(params.value, band);
+        return (
+          <Tooltip title={`Typical P/E for ${sector || 'this sector'}: ${band.low}–${band.high}`} arrow>
+            <Typography
+              variant="body2"
+              color={level ? VALUATION_COLOR[level] : 'text.primary'}
+              fontWeight={level && level !== 'fair' ? 700 : 600}
+            >
+              {params.value != null ? params.value.toFixed(2) : '-'}
+            </Typography>
+          </Tooltip>
+        );
+      },
+    },
+    {
+      field: 'book_value',
+      headerName: 'Book Value',
+      width: 120,
+      align: 'right',
+      headerAlign: 'right',
+      renderCell: (params: GridRenderCellParams) => (
+        <Typography variant="body2">
+          {params.value != null ? `${getCurrencySymbol(params.row.currency)} ${params.value.toFixed(2)}` : '-'}
+        </Typography>
+      ),
+    },
+    {
+      field: 'pb_ratio',
+      headerName: 'P/B',
       width: 90,
       align: 'right',
       headerAlign: 'right',
@@ -829,6 +915,7 @@ const ListStocks: React.FC = () => {
       </Paper>
 
       {/* India Stocks */}
+
       <Paper sx={{ width: '100%', p: 2, mb: 3 }}>
         <Box display="flex" alignItems="center" gap={1} mb={1}>
           <Typography variant="subtitle1" fontWeight={700}>

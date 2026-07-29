@@ -10,10 +10,10 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   Chip,
-  Card,
-  CardContent,
   Grid,
   Divider,
+  Tooltip,
+  LinearProgress,
 } from '@mui/material';
 import { LineChart } from '@mui/x-charts/LineChart';
 import { ShowChart, Timeline, PieChart } from '@mui/icons-material';
@@ -50,6 +50,44 @@ const HOLDING_TYPES_ORDER_INIT: ShareholdingType[] = [
   ShareholdingType.DIIs,
   ShareholdingType.PUBLIC,
 ];
+
+// ── Market sentiment signal from Price vs MA(20)/MA(200) (same logic as ListStocks) ──
+const getMASignal = (
+  closePrice: number | null | undefined,
+  ma20: number | null | undefined,
+  ma200: number | null | undefined
+): { signal: string; color: string; chipColor: 'success' | 'error' | 'warning' | 'default' } => {
+  if (!closePrice || !ma20 || !ma200) {
+    return { signal: 'No Data', color: 'text.disabled', chipColor: 'default' };
+  }
+
+  const aboveMA20 = closePrice > ma20;
+  const aboveMA200 = closePrice > ma200;
+  const ma20AboveMA200 = ma20 > ma200;
+
+  // Golden Cross: MA20 > MA200 and price above both
+  if (aboveMA20 && aboveMA200 && ma20AboveMA200) {
+    return { signal: 'Strong Bullish', color: 'success.main', chipColor: 'success' };
+  }
+
+  // Bullish: Price above both MAs but no golden cross yet
+  if (aboveMA20 && aboveMA200) {
+    return { signal: 'Bullish', color: 'success.light', chipColor: 'success' };
+  }
+
+  // Death Cross: MA20 < MA200 and price below both
+  if (!aboveMA20 && !aboveMA200 && !ma20AboveMA200) {
+    return { signal: 'Strong Bearish', color: 'error.main', chipColor: 'error' };
+  }
+
+  // Bearish: Price below both MAs
+  if (!aboveMA20 && !aboveMA200) {
+    return { signal: 'Bearish', color: 'error.light', chipColor: 'error' };
+  }
+
+  // Mixed signals
+  return { signal: 'Neutral', color: 'warning.main', chipColor: 'warning' };
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -112,6 +150,7 @@ const StockHistory: React.FC = () => {
     try {
       const stockRes = await stockAPI.getById(symbol);
       setStockDetails(stockRes.data);
+      console.log('Loaded stock details:', stockRes.data);
 
       // Shareholding is only available for Indian (INR) stocks
       if (stockRes.data.currency === 'INR') {
@@ -136,6 +175,30 @@ const StockHistory: React.FC = () => {
 
   const formatPrice = (price: number | null | undefined): string =>
     price == null ? 'N/A' : price.toFixed(2);
+
+  // Position (0-100%) of the current price within the 52-week low/high band
+  const getRangePosition = (
+    current: number | null | undefined,
+    low: number | null | undefined,
+    high: number | null | undefined
+  ): number | null => {
+    if (current == null || low == null || high == null || high === low) return null;
+    return Math.max(0, Math.min(100, ((current - low) / (high - low)) * 100));
+  };
+
+  // "Today" / "N days ago" relative label for a date string (same logic as ListStocks)
+  const getDaysAgo = (date: string | null | undefined): string => {
+    if (!date) return '';
+    const priceDate = new Date(date);
+    const now = new Date();
+    priceDate.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    const diffDays = Math.floor((now.getTime() - priceDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return '1 day ago';
+    if (diffDays < 0) return 'Future date';
+    return `${diffDays} days ago`;
+  };
 
   // ── Price chart data ───────────────────────────────────────────────────────
 
@@ -246,6 +309,11 @@ const StockHistory: React.FC = () => {
                 <Typography variant="h6" color="text.secondary" fontWeight={400} mt={0.5}>
                   {symbol}
                 </Typography>
+                {stockDetails?.price_last_updated && (
+                  <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
+                    Last updated - {getDaysAgo(stockDetails.price_last_updated)}
+                  </Typography>
+                )}
               </>
             )}
           </Box>
@@ -283,59 +351,228 @@ const StockHistory: React.FC = () => {
         </Box>
       </Paper>
 
-      {/* ── 2. Summary Cards ──────────────────────────────────────────────── */}
-      {summary && (
-        <Grid container spacing={2} mb={3}>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Current Price
+      {/* ── 2. Key Stats Row ──────────────────────────────────────────────── */}
+      {(summary || stockDetails) && (() => {
+        const pe = summary?.pe_ratio ?? stockDetails?.pe_ratio;
+        const pb = stockDetails?.pb_ratio;
+        const bookValue = stockDetails?.book_value;
+        const eps = stockDetails?.eps;
+        const low = summary?.price_52w_low ?? stockDetails?.price_52w_low;
+        const high = summary?.price_52w_high ?? stockDetails?.price_52w_high;
+        const current = summary?.current_price ?? stockDetails?.price_last_close;
+        const rangePosition = getRangePosition(current, low, high);
+        const ma20 = summary?.ma_20 ?? stockDetails?.price_ma_20d;
+        const ma200 = summary?.ma_200 ?? stockDetails?.price_ma_200d;
+
+        // Market Sentiment - MA(20/200): same min/mid/max positioning as ListStocks
+        let maBlock: React.ReactNode = (
+          <Typography variant="caption" color="text.secondary">No data</Typography>
+        );
+        if (current != null && ma20 != null && ma200 != null) {
+          const dataPoints = [
+            { value: current, label: 'Price' },
+            { value: ma20, label: '20d' },
+            { value: ma200, label: '200d' },
+          ];
+          const sorted = [...dataPoints].sort((a, b) => a.value - b.value);
+          const [minItem, middleItem, maxItem] = sorted;
+          const range = maxItem.value - minItem.value;
+
+          const pricePosition = range > 0 ? ((current - minItem.value) / range) * 100 : 50;
+          const ma20Position = range > 0 ? ((ma20 - minItem.value) / range) * 100 : 50;
+          const ma200Position = range > 0 ? ((ma200 - minItem.value) / range) * 100 : 50;
+
+          const signal = getMASignal(current, ma20, ma200);
+          let signalLabel = '';
+          let signalColor = '';
+          switch (signal.signal) {
+            case 'Strong Bullish':
+              signalLabel = 'Strong Buy';
+              signalColor = '#4caf50';
+              break;
+            case 'Bullish':
+              signalLabel = 'Buy';
+              signalColor = '#8bc34a';
+              break;
+            case 'Neutral':
+              signalLabel = 'Neutral';
+              signalColor = '#ff9800';
+              break;
+            case 'Bearish':
+              signalLabel = 'Sell';
+              signalColor = '#ff5722';
+              break;
+            case 'Strong Bearish':
+              signalLabel = 'Strong Sell';
+              signalColor = '#f44336';
+              break;
+            default:
+              signalLabel = 'Neutral';
+              signalColor = '#9e9e9e';
+          }
+
+          const middlePosition =
+            middleItem.label === 'Price' ? pricePosition : middleItem.label === '20d' ? ma20Position : ma200Position;
+
+          maBlock = (
+            <Tooltip
+              title={
+                <Box>
+                  <Typography variant="caption" display="block" fontWeight={600}>
+                    Price: {current.toFixed(2)}
+                  </Typography>
+                  <Typography variant="caption" display="block">MA(20): {ma20.toFixed(2)}</Typography>
+                  <Typography variant="caption" display="block">MA(200): {ma200.toFixed(2)}</Typography>
+                  <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+                    <Typography variant="caption" display="block" fontWeight={600}>
+                      {ma20 > ma200 ? '🟢 Golden Cross Territory' : '🔴 Death Cross Territory'}
+                    </Typography>
+                  </Box>
+                </Box>
+              }
+              arrow
+            >
+              <Box sx={{ width: '100%' }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Typography variant="caption" fontSize="0.65rem" color="text.secondary" fontWeight={600}>
+                    {minItem.label}
+                  </Typography>
+                  <Typography variant="caption" fontSize="0.65rem" color={signalColor} fontWeight={700}>
+                    {signalLabel}
+                  </Typography>
+                  <Typography variant="caption" fontSize="0.65rem" color="text.secondary" fontWeight={600}>
+                    {maxItem.label}
+                  </Typography>
+                </Box>
+                <Box sx={{ position: 'relative', width: '100%', height: 8, mt: 0.5 }}>
+                  <LinearProgress
+                    variant="determinate"
+                    value={100}
+                    sx={{
+                      height: 6,
+                      borderRadius: 1,
+                      backgroundColor: 'grey.300',
+                      '& .MuiLinearProgress-bar': { backgroundColor: 'transparent' },
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      left: `${middlePosition}%`,
+                      top: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      width: 3,
+                      height: 12,
+                      backgroundColor: '#000000',
+                      borderRadius: 0.5,
+                      zIndex: 3,
+                      border: '1px solid white',
+                    }}
+                  />
+                </Box>
+              </Box>
+            </Tooltip>
+          );
+        }
+
+        return (
+          <Paper sx={{ p: 2, mb: 3 }}>
+            <Box display="flex" alignItems="stretch" flexWrap="wrap">
+              <Box sx={{ px: 2.5, py: 0.5 }}>
+                <Typography variant="caption" color="text.secondary">Last Close</Typography>
+                <Typography variant="h6" fontWeight={700}>
+                  {current != null ? `${currencySymbol}${formatPrice(current)}` : '--'}
                 </Typography>
-                <Typography variant="h5" fontWeight={700}>
-                  {currencySymbol}{formatPrice(summary.current_price)}
+              </Box>
+              <Divider orientation="vertical" flexItem />
+              <Box sx={{ px: 2.5, py: 0.5, flex: 1, minWidth: 260 }}>
+                {low != null && high != null ? (
+                  <>
+                    <Box display="flex" justifyContent="space-between" alignItems="baseline">
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">Low</Typography>
+                        <Typography variant="body2" fontWeight={700}>
+                          {currencySymbol}{formatPrice(low)}
+                        </Typography>
+                      </Box>
+                      <Typography variant="caption" color="text.secondary">
+                        {rangePosition != null ? `${rangePosition.toFixed(0)}%` : '52W Range'}
+                      </Typography>
+                      <Box textAlign="right">
+                        <Typography variant="caption" color="text.secondary">High</Typography>
+                        <Typography variant="body2" fontWeight={700}>
+                          {currencySymbol}{formatPrice(high)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Box sx={{ position: 'relative', mt: 1 }}>
+                      <Box
+                        sx={{
+                          height: 6,
+                          borderRadius: 3,
+                          background: 'linear-gradient(to right, #ef4444, #eab308, #22c55e)',
+                        }}
+                      />
+                      {rangePosition != null && (
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: 6,
+                            left: `${rangePosition}%`,
+                            transform: 'translateX(-50%)',
+                            width: 0,
+                            height: 0,
+                            borderLeft: '6px solid transparent',
+                            borderRight: '6px solid transparent',
+                            borderBottom: '8px solid #333',
+                          }}
+                        />
+                      )}
+                    </Box>
+                  </>
+                ) : (
+                  <Typography variant="caption" color="text.secondary">No 52W range data</Typography>
+                )}
+              </Box>
+              <Divider orientation="vertical" flexItem />
+              <Box sx={{ px: 2.5, py: 0.5, flex: 1, minWidth: 220 }}>
+                <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
+                  Market Sentiment - MA(20/200)
                 </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  52W Low
+                {maBlock}
+              </Box>
+              <Divider orientation="vertical" flexItem />
+              <Box sx={{ px: 2.5, py: 0.5 }}>
+                <Typography variant="caption" color="text.secondary">Book Value</Typography>
+                <Typography variant="h6" fontWeight={700}>
+                  {bookValue != null ? `${currencySymbol}${bookValue.toFixed(2)}` : '--'}
                 </Typography>
-                <Typography variant="h6" color="success.main" fontWeight={600}>
-                  {currencySymbol}{formatPrice(summary.price_52w_low)}
+              </Box>
+              <Divider orientation="vertical" flexItem />
+              <Box sx={{ px: 2.5, py: 0.5 }}>
+                <Typography variant="caption" color="text.secondary">P/B</Typography>
+                <Typography variant="h6" fontWeight={700}>
+                  {pb != null ? pb.toFixed(2) : '--'}
                 </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  52W High
+              </Box>
+              <Divider orientation="vertical" flexItem />
+              <Box sx={{ px: 2.5, py: 0.5 }}>
+                <Typography variant="caption" color="text.secondary">EPS</Typography>
+                <Typography variant="h6" fontWeight={700}>
+                  {eps != null ? `${currencySymbol}${eps.toFixed(2)}` : '--'}
                 </Typography>
-                <Typography variant="h6" color="error.main" fontWeight={600}>
-                  {currencySymbol}{formatPrice(summary.price_52w_high)}
+              </Box>
+              <Divider orientation="vertical" flexItem />
+              <Box sx={{ px: 2.5, py: 0.5 }}>
+                <Typography variant="caption" color="text.secondary">P/E</Typography>
+                <Typography variant="h6" fontWeight={700}>
+                  {pe != null ? pe.toFixed(2) : '--'}
                 </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Last Updated
-                </Typography>
-                <Typography variant="body1" fontWeight={600}>
-                  {summary.last_updated || 'N/A'}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
+              </Box>
+            </Box>
+          </Paper>
+        );
+      })()}
 
       {/* ── 3. Price Chart Controls ───────────────────────────────────────── */}
       <Paper sx={{ p: 2, mb: 3 }}>
@@ -476,18 +713,6 @@ const StockHistory: React.FC = () => {
               <Typography variant="body2" color="text.secondary">MA 200</Typography>
               <Typography variant="h6">{currencySymbol}{formatPrice(summary.ma_200)}</Typography>
             </Grid>
-            {summary.pe_ratio != null && (
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <Typography variant="body2" color="text.secondary">P/E Ratio</Typography>
-                <Typography variant="h6">{formatPrice(summary.pe_ratio)}</Typography>
-              </Grid>
-            )}
-            {summary.dividend_yield != null && (
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <Typography variant="body2" color="text.secondary">Dividend Yield</Typography>
-                <Typography variant="h6">{formatPrice(summary.dividend_yield)}%</Typography>
-              </Grid>
-            )}
           </Grid>
         </Paper>
       )}
