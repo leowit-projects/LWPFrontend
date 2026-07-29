@@ -653,18 +653,18 @@ const ListStocks: React.FC = () => {
         </Typography>
       ),
     },
-    {
-      field: 'eps',
-      headerName: 'EPS',
-      width: 100,
-      align: 'right',
-      headerAlign: 'right',
-      renderCell: (params: GridRenderCellParams) => (
-        <Typography variant="body2">
-          {params.value != null ? `${getCurrencySymbol(params.row.currency)} ${params.value.toFixed(2)}` : '-'}
-        </Typography>
-      ),
-    },
+    // {
+    //   field: 'eps',
+    //   headerName: 'EPS',
+    //   width: 100,
+    //   align: 'right',
+    //   headerAlign: 'right',
+    //   renderCell: (params: GridRenderCellParams) => (
+    //     <Typography variant="body2">
+    //       {params.value != null ? `${getCurrencySymbol(params.row.currency)} ${params.value.toFixed(2)}` : '-'}
+    //     </Typography>
+    //   ),
+    // },
     {
       field: 'pe_ratio',
       headerName: 'P/E',
@@ -688,18 +688,18 @@ const ListStocks: React.FC = () => {
         );
       },
     },
-    {
-      field: 'book_value',
-      headerName: 'Book Value',
-      width: 120,
-      align: 'right',
-      headerAlign: 'right',
-      renderCell: (params: GridRenderCellParams) => (
-        <Typography variant="body2">
-          {params.value != null ? `${getCurrencySymbol(params.row.currency)} ${params.value.toFixed(2)}` : '-'}
-        </Typography>
-      ),
-    },
+    // {
+    //   field: 'book_value',
+    //   headerName: 'Book Value',
+    //   width: 120,
+    //   align: 'right',
+    //   headerAlign: 'right',
+    //   renderCell: (params: GridRenderCellParams) => (
+    //     <Typography variant="body2">
+    //       {params.value != null ? `${getCurrencySymbol(params.row.currency)} ${params.value.toFixed(2)}` : '-'}
+    //     </Typography>
+    //   ),
+    // },
     {
       field: 'pb_ratio',
       headerName: 'P/B',
