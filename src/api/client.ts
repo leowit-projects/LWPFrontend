@@ -52,6 +52,7 @@ import {
     PortfolioBetaResponse,
     CorrelationMatrixResponse,
     Tag,
+    WatchlistGroupFull,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -517,6 +518,12 @@ export const holdingAnalysisAPI = {
         api.get<CorrelationMatrixResponse>(`/api/holding-analysis/${accountId}/correlation`, {
             params: { lookback_days: lookbackDays },
         }),
+};
+
+// Watchlist API
+export const watchlistAPI = {
+    getGroupsFull: (): Promise<AxiosResponse<WatchlistGroupFull[]>> =>
+        api.get<WatchlistGroupFull[]>('/api/watchlist-groups/full'),
 };
 
 // Tags API

@@ -817,6 +817,73 @@ export interface Tag {
     stock_symbols: string[];
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Watchlist types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface WatchlistItem {
+    id: number;
+    watchlist_id: number;
+    asset_type: AssetType;
+    symbol: string;
+    name: string | null;
+    currency: CurrencyCode | null;
+    exchange: string | null;
+    price_last_close: number | null;
+    price_52w_low: number | null;
+    price_52w_high: number | null;
+    moving_average_20: number | null;
+    moving_average_200: number | null;
+    book_value: number | null;
+    earnings_per_share: number | null;
+    pb_ratio: number | null;
+    pe_ratio: number | null;
+    rsi_index: number | null;
+    holding_quantities: number | null;
+    average_price: number | null;
+    added_at: string;
+}
+
+export interface Watchlist {
+    id: number;
+    watchlist_group_id: number;
+    name: string;
+    item_count: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface WatchlistFull extends Watchlist {
+    items: WatchlistItem[];
+}
+
+export interface WatchlistGroup {
+    id: number;
+    user_id: number;
+    name: string;
+    watchlist_count: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface WatchlistGroupFull extends WatchlistGroup {
+    watchlists: WatchlistFull[];
+}
+
+export interface WatchlistGroupCreate {
+    name: string;
+}
+
+export interface WatchlistUpdate {
+    name: string;
+}
+
+export interface WatchlistItemCreate {
+    asset_type: AssetType;
+    stock_symbol_id?: string | null;
+    etf_symbol_id?: string | null;
+}
+
 export interface AccountAssetSummary {
     holding_account_id: string;
     account_platform: AccountPlatform;

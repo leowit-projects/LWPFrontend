@@ -15,6 +15,7 @@ import ListEtfs from './pages/ListEtfs';
 import StockHistory from './pages/StockHistory';
 import SectorAnalysis from './pages/SectorAnalysis';
 import StockSuggestions from './pages/StockSuggestions';
+import Watchlists from './pages/Watchlist/Watchlists';
 
 // Holdings related pages
 import HoldingAccounts from './pages/Holdings/HoldingAccounts';
@@ -144,6 +145,16 @@ const App: React.FC = () => {
                   <ProtectedRoute>
                     <Layout>
                       <ListEtfs />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/watchlists"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Watchlists />
                     </Layout>
                   </ProtectedRoute>
                 }

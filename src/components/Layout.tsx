@@ -39,12 +39,15 @@ import {
   ChevronLeft,
   ChevronRight,
   ShowChart,
+  Visibility,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import MyLogo from '../assets/lion.png';
 
 const drawerWidth = 210;
 const collapsedDrawerWidth = 60;
+// 2/3 of MUI's default Toolbar height (56px xs / 64px sm+)
+const toolbarMinHeight = { xs: 37, sm: 43 };
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -55,7 +58,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const { user, logout, isAdmin, isViewer } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [adminOpen, setAdminOpen] = useState(false);
 
@@ -94,6 +97,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   menuItems.push({ text: 'Stocks', icon: <TrendingUp />, path: '/list-stocks' });
   menuItems.push({ text: 'ETFs', icon: <PieChart />, path: '/list-etfs' });
+  menuItems.push({ text: 'Watchlists', icon: <Visibility />, path: '/watchlists' });
 
   if (isViewer || isAdmin) {
     menuItems.push({ text: 'Sector Analysis', icon: <ShowChart />, path: '/sector-analysis' });
@@ -133,6 +137,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           alignItems: 'center',
           gap: drawerOpen ? 0 : 1,
           py: drawerOpen ? 0 : 1,
+          minHeight: toolbarMinHeight,
         }}
       >
         <Box display="flex" alignItems="center" gap={1}>
@@ -255,7 +260,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           transition: 'width 0.2s, margin 0.2s',
         }}
       >
-        <Toolbar>
+        <Toolbar sx={{ minHeight: toolbarMinHeight }}>
           <IconButton
             color="inherit"
             aria-label="open drawer"
@@ -323,7 +328,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           transition: 'width 0.2s',
         }}
       >
-        <Toolbar />
+        <Toolbar sx={{ minHeight: toolbarMinHeight }} />
         {children}
       </Box>
     </Box>
