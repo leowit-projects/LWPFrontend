@@ -21,7 +21,7 @@ import {
   Autocomplete,
 } from '@mui/material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
-import { Add, Edit, Delete, FilterAlt, Groups, LocalOffer } from '@mui/icons-material';
+import { Add, Edit, Delete, FilterAlt, Groups, LocalOffer, Search } from '@mui/icons-material';
 import { stockAPI, industriesAPI, tagsAPI } from '../../api/client';
 import { StockSymbol, CurrencyCode, Industry, Tag } from '../../types';
 
@@ -38,6 +38,8 @@ const Stocks: React.FC = () => {
   const [selectedIndustry, setSelectedIndustry] = useState<string>('all');
   const [sectorButtonFilter, setSectorButtonFilter] = useState<string>('All');
   const [marketFilter, setMarketFilter] = useState<'All' | 'India' | 'US'>('All');
+  const [searchInput, setSearchInput] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [promoterDialogOpen, setPromoterDialogOpen] = useState<boolean>(false);
   const [promoterStock, setPromoterStock] = useState<StockSymbol | null>(null);
   const [promoterList, setPromoterList] = useState<string[]>([]);
@@ -64,7 +66,7 @@ const Stocks: React.FC = () => {
 
   useEffect(() => {
     filterStocks();
-  }, [stocks, selectedIndustry, sectorButtonFilter, marketFilter]);
+  }, [stocks, selectedIndustry, sectorButtonFilter, marketFilter, searchQuery]);
 
   useEffect(() => {
     // Extract unique industries from stocks
@@ -139,6 +141,15 @@ const Stocks: React.FC = () => {
     if (selectedIndustry !== 'all') {
       result = result.filter(stock =>
         stock.sector_industry?.toLowerCase().includes(selectedIndustry.toLowerCase())
+      );
+    }
+
+    // Search by name or symbol
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim().toLowerCase();
+      result = result.filter(stock =>
+        stock.symbol.toLowerCase().includes(query) ||
+        (stock.name ?? '').toLowerCase().includes(query)
       );
     }
 
@@ -596,6 +607,27 @@ const Stocks: React.FC = () => {
       {/* Industry Dropdown + Add Button */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Box display="flex" gap={2} alignItems="center">
+          <TextField
+            placeholder="Search by name or symbol"
+            size="small"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') setSearchQuery(searchInput);
+            }}
+            sx={{ minWidth: 260 }}
+            InputProps={{
+              startAdornment: <Search sx={{ mr: 1, color: 'action.active' }} fontSize="small" />,
+            }}
+          />
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => setSearchQuery(searchInput)}
+            sx={{ textTransform: 'none' }}
+          >
+            Search
+          </Button>
           <FormControl sx={{ minWidth: 300 }}>
             <InputLabel>Filter by Industry</InputLabel>
             <Select

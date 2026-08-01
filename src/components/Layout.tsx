@@ -89,7 +89,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const handleAdminToggle = () => {
-    setAdminOpen(!adminOpen);
+    if (!drawerOpen) {
+      // Expand the sidebar first so the dropdown has room to render
+      setDrawerOpen(true);
+      setAdminOpen(true);
+    } else {
+      setAdminOpen(!adminOpen);
+    }
   };
 
   // Build menu items based on user role
@@ -199,8 +205,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <>
             <ListItem disablePadding>
               <Tooltip title={!drawerOpen ? 'Admin' : ''} placement="right">
-                <ListItemButton 
-                  onClick={drawerOpen ? handleAdminToggle : undefined}
+                <ListItemButton
+                  onClick={handleAdminToggle}
                   sx={{ justifyContent: drawerOpen ? 'initial' : 'center' }}
                 >
                   <ListItemIcon sx={{ minWidth: drawerOpen ? 56 : 0, justifyContent: 'center' }}>

@@ -41,13 +41,14 @@ function TabPanel({ children, value, index }: { children: React.ReactNode; value
 // Remaining viewport height below the fixed header (Layout's AppBar/Toolbar + main padding).
 const pageHeight = { xs: 'calc(100vh - 53px)', sm: 'calc(100vh - 59px)' };
 
-type SortCriteria = '52w_position' | 'pb_ratio' | 'pe_ratio' | 'rsi_index';
+type SortCriteria = '52w_position' | 'pb_ratio' | 'pe_ratio' | 'rsi_index' | 'dividend_yield';
 
 const sortOptions: { value: SortCriteria; label: string }[] = [
   { value: '52w_position', label: '52W Position' },
   { value: 'pb_ratio', label: 'P/B Ratio' },
   { value: 'pe_ratio', label: 'P/E Ratio' },
   { value: 'rsi_index', label: 'RSI Index' },
+  { value: 'dividend_yield', label: 'Dividend Yield' },
 ];
 
 // Position of the last close within the 52-week range, 0 (at low) to 1 (at high).
@@ -64,7 +65,9 @@ function getSortValue(item: WatchlistItem, criteria: SortCriteria): number | nul
 
 function formatSortValue(value: number | null, criteria: SortCriteria): string {
   if (value == null) return '—';
-  return criteria === '52w_position' ? `${(value * 100).toFixed(0)}%` : value.toFixed(2);
+  if (criteria === '52w_position') return `${(value * 100).toFixed(0)}%`;
+  if (criteria === 'dividend_yield') return `${value.toFixed(2)}%`;
+  return value.toFixed(2);
 }
 
 // 5-tier scale from strongest buy signal to strongest caution, based on the selected metric.
@@ -552,8 +555,8 @@ const Watchlists: React.FC = () => {
                             setDragItem(null);
                           }}
                           sx={{
-                            width: 260,
-                            flex: '0 0 260px',
+                            width: 280,
+                            flex: '0 0 280px',
                             display: 'flex',
                             flexDirection: 'column',
                             borderRadius: 1.5,
@@ -727,9 +730,24 @@ const Watchlists: React.FC = () => {
                                         {item.holding_quantities != null && (
                                           <Typography
                                             variant="caption"
-                                            sx={{ fontSize: '0.62rem', display: 'block', lineHeight: 1.2, color: 'text.disabled' }}
+                                            sx={{ fontSize: '0.62rem', display: 'block', lineHeight: 1.2, color: 'primary.main', fontWeight: 600 }}
                                           >
-                                            qty {item.holding_quantities}
+                                            HQ: <b>{item.holding_quantities}</b>
+                                          </Typography>
+                                        )}
+                                        {item.average_price != null && item.average_price !== 0 && item.price_last_close != null && (
+                                          <Typography
+                                            variant="caption"
+                                            sx={{
+                                              fontSize: '0.62rem',
+                                              display: 'block',
+                                              lineHeight: 1.2,
+                                              fontWeight: 600,
+                                              color: item.price_last_close >= item.average_price ? 'success.main' : 'error.main',
+                                            }}
+                                          >
+                                            HP: {item.average_price.toFixed(2)} ({item.price_last_close >= item.average_price ? '▲' : '▼'}
+                                            {Math.abs(((item.price_last_close - item.average_price) / item.average_price) * 100).toFixed(2)}%)
                                           </Typography>
                                         )}
                                       </Box>

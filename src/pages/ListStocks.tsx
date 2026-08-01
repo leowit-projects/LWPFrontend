@@ -16,8 +16,9 @@ import {
   ListItemText,
   Link,
   Button,
+  TextField,
 } from '@mui/material';
-import { TrendingUp } from '@mui/icons-material';
+import { TrendingUp, Search } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { stockAPI } from '../api/client';
 import { StockSymbol } from '../types';
@@ -173,6 +174,8 @@ const ListStocks: React.FC = () => {
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [selectedStocks, setSelectedStocks] = useState<string[]>([]); // New state for selected stock symbols
   const [sectorButtonFilter, setSectorButtonFilter] = useState<string>('All');
+  const [searchInput, setSearchInput] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Split filtered stocks by market
   const indiaStocks = filteredStocks.filter(s => s.currency === 'INR');
@@ -214,13 +217,22 @@ const ListStocks: React.FC = () => {
 
     // Then apply industry dropdown filter
     if (selectedIndustries.length > 0) {
-      result = result.filter((stock) => 
+      result = result.filter((stock) =>
         stock.sector_industry && selectedIndustries.includes(stock.sector_industry)
       );
     }
 
+    // Search by name or symbol
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim().toLowerCase();
+      result = result.filter(stock =>
+        stock.symbol.toLowerCase().includes(query) ||
+        (stock.name ?? '').toLowerCase().includes(query)
+      );
+    }
+
     setFilteredStocks(result);
-  }, [selectedIndustries, stocks, sectorButtonFilter]);
+  }, [selectedIndustries, stocks, sectorButtonFilter, searchQuery]);
 
   const loadStocks = async (): Promise<void> => {
     setLoading(true);
@@ -899,6 +911,27 @@ const ListStocks: React.FC = () => {
       {/* Filter Section */}
       <Paper sx={{ width: '100%', p: 2, mb: 2, ...CARD_SX }}>
         <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
+          <TextField
+            placeholder="Search by name or symbol"
+            size="small"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') setSearchQuery(searchInput);
+            }}
+            sx={{ minWidth: 260 }}
+            InputProps={{
+              startAdornment: <Search sx={{ mr: 1, color: 'action.active' }} fontSize="small" />,
+            }}
+          />
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => setSearchQuery(searchInput)}
+            sx={{ textTransform: 'none' }}
+          >
+            Search
+          </Button>
           <FormControl sx={{ minWidth: 300 }}>
             <InputLabel>Filter by Industry</InputLabel>
             <Select

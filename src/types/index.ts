@@ -845,6 +845,7 @@ export interface WatchlistItem {
     pb_ratio: number | null;
     pe_ratio: number | null;
     rsi_index: number | null;
+    dividend_yield: number | null;
     holding_quantities: number | null;
     average_price: number | null;
     added_at: string;
