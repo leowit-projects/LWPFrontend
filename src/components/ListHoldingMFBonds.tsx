@@ -6,7 +6,6 @@ import {
   CardContent,
   IconButton,
   Chip,
-  Grid,
   Table,
   TableBody,
   TableCell,
@@ -33,16 +32,25 @@ export default function ListHoldingMFBonds({ mutualFunds, bonds, currency, onDel
   const bondInvested = bonds.reduce((a, b) => a + b.invested_value, 0);
   const bondCurrent = bonds.reduce((a, b) => a + b.current_value, 0);
   const mfCards = [
-    { label: 'Mutual Funds', value: mutualFunds.length.toString(), color: '#43e97b' },
     { label: 'MF Invested', value: formatCurrency(mfInvested, currency), color: '#38f9d7' },
     { label: 'MF Current', value: formatCurrency(mfCurrent, currency), color: '#4facfe' },
     { label: 'MF P&L', value: formatCurrency(mfPnL, currency), color: mfPnL >= 0 ? '#43e97b' : '#f5576c' },
   ];
+  const bondCards = [
+    { label: 'Total Bonds Value', value: formatCurrency(bondCurrent, currency), color: '#fa709a' },
+  ];
   return (
     <Box>
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        {mfCards.map((c) => (<Grid size={{ xs: 12, sm: 6, md: 3 }} key={c.label}><Card sx={{ borderTop: `4px solid ${c.color}`, boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}><CardContent sx={{ pb: '12px !important' }}><Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase">{c.label}</Typography><Typography variant="h5" fontWeight={700} sx={{ color: c.color }}>{c.value}</Typography></CardContent></Card></Grid>))}
-      </Grid>
+      <Box sx={{ display: 'flex', gap: 2, mb: 3, overflowX: 'auto' }}>
+        {[...mfCards, ...bondCards].map((c) => (
+          <Card key={c.label} sx={{ flex: '1 1 0', minWidth: 160, borderTop: `4px solid ${c.color}`, boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
+            <CardContent sx={{ pb: '12px !important' }}>
+              <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase" noWrap sx={{ display: 'block' }}>{c.label}</Typography>
+              <Typography variant="h5" fontWeight={700} noWrap sx={{ color: c.color }}>{c.value}</Typography>
+            </CardContent>
+          </Card>
+        ))}
+      </Box>
       {mutualFunds.length > 0 && (
         <Paper sx={{ mb: 3, boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
           <Box sx={{ p: 1.5, background: 'linear-gradient(90deg,#43e97b,#38f9d7)', borderRadius: '4px 4px 0 0', display: 'flex', alignItems: 'center', gap: 1 }}>

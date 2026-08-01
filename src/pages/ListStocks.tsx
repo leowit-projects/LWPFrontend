@@ -17,6 +17,7 @@ import {
   Link,
   Button,
 } from '@mui/material';
+import { TrendingUp } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { stockAPI } from '../api/client';
 import { StockSymbol } from '../types';
@@ -154,6 +155,13 @@ const VALUATION_COLOR: Record<'low' | 'fair' | 'high', string> = {
   low: 'info.main',      // Undervalued
   fair: 'success.main',  // Within range
   high: 'error.main',    // Overvalued
+};
+
+const CARD_SX = {
+  borderRadius: 2,
+  boxShadow: '0 2px 10px rgba(0,0,0,0.07)',
+  border: '1px solid',
+  borderColor: 'grey.200',
 };
 
 const ListStocks: React.FC = () => {
@@ -410,6 +418,34 @@ const ListStocks: React.FC = () => {
             <Typography variant="caption" color="textSecondary">
               {price_last_updated != null ? getDaysAgo(price_last_updated) : '-'}
             </Typography>
+          </Box>
+        );
+      },
+    },
+    {
+      field: 'price_change_pct',
+      headerName: 'Change',
+      width: 110,
+      align: 'right',
+      headerAlign: 'right',
+      renderCell: (params: GridRenderCellParams) => {
+        const pct = params.row.price_change_pct;
+        const change = params.row.price_change;
+        if (pct == null) {
+          return <Typography variant="body2" color="text.disabled">—</Typography>;
+        }
+        const positive = pct >= 0;
+        const color = positive ? 'success.main' : 'error.main';
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+            <Typography variant="body2" fontWeight={700} color={color}>
+              {positive ? '▲' : '▼'} {Math.abs(pct).toFixed(2)}%
+            </Typography>
+            {change != null && (
+              <Typography variant="caption" color={color}>
+                {positive ? '+' : ''}{change.toFixed(2)}
+              </Typography>
+            )}
           </Box>
         );
       },
@@ -799,9 +835,12 @@ const ListStocks: React.FC = () => {
   return (
     <Container maxWidth="xl" sx={{ mt: 1, mb: 1 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h6" fontWeight={700}>
-          Stocks
-        </Typography>
+        <Box display="flex" alignItems="center" gap={1}>
+          <TrendingUp sx={{ color: '#667eea' }} />
+          <Typography variant="h6" fontWeight={700}>
+            Stocks
+          </Typography>
+        </Box>
         <Box display="flex" alignItems="center" gap={2}>
           {selectedStocks.length > 0 && (
             <Button
@@ -858,7 +897,7 @@ const ListStocks: React.FC = () => {
       </Box>
 
       {/* Filter Section */}
-      <Paper sx={{ width: '100%', p: 2, mb: 2 }}>
+      <Paper sx={{ width: '100%', p: 2, mb: 2, ...CARD_SX }}>
         <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
           <FormControl sx={{ minWidth: 300 }}>
             <InputLabel>Filter by Industry</InputLabel>
@@ -916,7 +955,7 @@ const ListStocks: React.FC = () => {
 
       {/* India Stocks */}
 
-      <Paper sx={{ width: '100%', p: 2, mb: 3 }}>
+      <Paper sx={{ width: '100%', p: 2, mb: 3, ...CARD_SX }}>
         <Box display="flex" alignItems="center" gap={1} mb={1}>
           <Typography variant="subtitle1" fontWeight={700}>
             🇮🇳 India Stocks
@@ -947,7 +986,7 @@ const ListStocks: React.FC = () => {
       </Paper>
 
       {/* US Stocks */}
-      <Paper sx={{ width: '100%', p: 2 }}>
+      <Paper sx={{ width: '100%', p: 2, ...CARD_SX }}>
         <Box display="flex" alignItems="center" gap={1} mb={1}>
           <Typography variant="subtitle1" fontWeight={700}>
             🇺🇸 US Stocks

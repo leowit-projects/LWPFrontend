@@ -52,7 +52,15 @@ import {
     PortfolioBetaResponse,
     CorrelationMatrixResponse,
     Tag,
+    WatchlistGroup,
     WatchlistGroupFull,
+    WatchlistGroupCreate,
+    WatchlistGroupUpdate,
+    Watchlist,
+    WatchlistCreate,
+    WatchlistUpdate,
+    WatchlistItem,
+    WatchlistItemCreate,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -524,6 +532,30 @@ export const holdingAnalysisAPI = {
 export const watchlistAPI = {
     getGroupsFull: (): Promise<AxiosResponse<WatchlistGroupFull[]>> =>
         api.get<WatchlistGroupFull[]>('/api/watchlist-groups/full'),
+
+    createGroup: (data: WatchlistGroupCreate): Promise<AxiosResponse<WatchlistGroup>> =>
+        api.post<WatchlistGroup>('/api/watchlist-groups', data),
+
+    updateGroup: (groupId: number, data: WatchlistGroupUpdate): Promise<AxiosResponse<WatchlistGroup>> =>
+        api.put<WatchlistGroup>(`/api/watchlist-groups/${groupId}`, data),
+
+    deleteGroup: (groupId: number): Promise<AxiosResponse<{ message: string; id: number }>> =>
+        api.delete(`/api/watchlist-groups/${groupId}`),
+
+    createWatchlist: (groupId: number, data: WatchlistCreate): Promise<AxiosResponse<Watchlist>> =>
+        api.post<Watchlist>(`/api/watchlist-groups/${groupId}/watchlists`, data),
+
+    updateWatchlist: (watchlistId: number, data: WatchlistUpdate): Promise<AxiosResponse<Watchlist>> =>
+        api.put<Watchlist>(`/api/watchlists/${watchlistId}`, data),
+
+    deleteWatchlist: (watchlistId: number): Promise<AxiosResponse<{ message: string; id: number }>> =>
+        api.delete(`/api/watchlists/${watchlistId}`),
+
+    addItem: (watchlistId: number, data: WatchlistItemCreate): Promise<AxiosResponse<WatchlistItem>> =>
+        api.post<WatchlistItem>(`/api/watchlists/${watchlistId}/items`, data),
+
+    removeItem: (watchlistId: number, itemId: number): Promise<AxiosResponse<{ message: string; id: number }>> =>
+        api.delete(`/api/watchlists/${watchlistId}/items/${itemId}`),
 };
 
 // Tags API

@@ -16,6 +16,7 @@ import StockHistory from './pages/StockHistory';
 import SectorAnalysis from './pages/SectorAnalysis';
 import StockSuggestions from './pages/StockSuggestions';
 import Watchlists from './pages/Watchlist/Watchlists';
+import CreateWatchlistGroup from './pages/Watchlist/CreateWatchlistGroup';
 
 // Holdings related pages
 import HoldingAccounts from './pages/Holdings/HoldingAccounts';
@@ -155,6 +156,16 @@ const App: React.FC = () => {
                   <ProtectedRoute>
                     <Layout>
                       <Watchlists />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/watchlists/new"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <CreateWatchlistGroup />
                     </Layout>
                   </ProtectedRoute>
                 }

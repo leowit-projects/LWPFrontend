@@ -14,6 +14,7 @@ import {
   Checkbox,
   ListItemText,
 } from '@mui/material';
+import { PieChart } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { etfAPI } from '../api/client';
 import { ETFSymbol } from '../types';
@@ -111,6 +112,13 @@ const getCurrencySymbol = (currency: string): string => {
     default:
       return currency;
   }
+};
+
+const CARD_SX = {
+  borderRadius: 2,
+  boxShadow: '0 2px 10px rgba(0,0,0,0.07)',
+  border: '1px solid',
+  borderColor: 'grey.200',
 };
 
 const ListEtfs: React.FC = () => {
@@ -223,6 +231,34 @@ const ListEtfs: React.FC = () => {
               </>
             ) : (
               <Typography variant="body2">-</Typography>
+            )}
+          </Box>
+        );
+      },
+    },
+    {
+      field: 'price_change_pct',
+      headerName: 'Change',
+      width: 110,
+      align: 'right',
+      headerAlign: 'right',
+      renderCell: (params: GridRenderCellParams) => {
+        const pct = params.row.price_change_pct;
+        const change = params.row.price_change;
+        if (pct == null) {
+          return <Typography variant="body2" color="text.disabled">—</Typography>;
+        }
+        const positive = pct >= 0;
+        const color = positive ? 'success.main' : 'error.main';
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+            <Typography variant="body2" fontWeight={700} color={color}>
+              {positive ? '▲' : '▼'} {Math.abs(pct).toFixed(2)}%
+            </Typography>
+            {change != null && (
+              <Typography variant="caption" color={color}>
+                {positive ? '+' : ''}{change.toFixed(2)}
+              </Typography>
             )}
           </Box>
         );
@@ -505,9 +541,12 @@ const ListEtfs: React.FC = () => {
   return (
     <Container maxWidth="xl" sx={{ mt: 1, mb: 1 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h6" fontWeight={700}>
-          ETFs
-        </Typography>
+        <Box display="flex" alignItems="center" gap={1}>
+          <PieChart sx={{ color: '#667eea' }} />
+          <Typography variant="h6" fontWeight={700}>
+            ETFs
+          </Typography>
+        </Box>
         <Box display="flex" alignItems="center" gap={2}>
           {lastRefreshed && (
             <Typography variant="caption" color="text.secondary">
@@ -523,7 +562,7 @@ const ListEtfs: React.FC = () => {
       </Box>
 
       {/* Filter Section */}
-      <Paper sx={{ width: '100%', p: 2, mb: 2 }}>
+      <Paper sx={{ width: '100%', p: 2, mb: 2, ...CARD_SX }}>
         <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
           <FormControl sx={{ minWidth: 300 }}>
             <InputLabel>Filter by Industry</InputLabel>
@@ -581,7 +620,7 @@ const ListEtfs: React.FC = () => {
       </Paper>
 
       {/* Data Grid */}
-      <Paper sx={{ width: '100%', p: 2 }}>
+      <Paper sx={{ width: '100%', p: 2, ...CARD_SX }}>
         <Box sx={{ height: '80vh', width: '100%' }}>
           <DataGrid
             rows={filteredEtfs}

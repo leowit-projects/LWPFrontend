@@ -82,6 +82,8 @@ export interface StockSymbol {
     is_purchase_eligible: boolean;
     purchase_quantity?: number;
     price_last_close?: number;
+    price_change?: number;
+    price_change_pct?: number;
     price_last_updated?: string;
     price_52w_low?: number;
     price_52w_high?: number;
@@ -123,6 +125,8 @@ export interface ETFSymbol {
 
     // Market Snapshot
     price_last_close?: number;
+    price_change?: number;
+    price_change_pct?: number;
     price_52w_low?: number;
     price_52w_high?: number;
 
@@ -830,6 +834,8 @@ export interface WatchlistItem {
     currency: CurrencyCode | null;
     exchange: string | null;
     price_last_close: number | null;
+    price_change: number | null;
+    price_change_pct: number | null;
     price_52w_low: number | null;
     price_52w_high: number | null;
     moving_average_20: number | null;
@@ -871,6 +877,14 @@ export interface WatchlistGroupFull extends WatchlistGroup {
 }
 
 export interface WatchlistGroupCreate {
+    name: string;
+}
+
+export interface WatchlistGroupUpdate {
+    name: string;
+}
+
+export interface WatchlistCreate {
     name: string;
 }
 
