@@ -91,8 +91,15 @@ const getMASignal = (
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-const StockHistory: React.FC = () => {
-  const { symbol } = useParams<{ symbol: string }>();
+interface StockHistoryProps {
+  // When provided (e.g. rendered inline inside a modal), used instead of the
+  // :symbol route param so the component doesn't require its own route/URL.
+  symbolProp?: string;
+}
+
+const StockHistory: React.FC<StockHistoryProps> = ({ symbolProp }) => {
+  const { symbol: routeSymbol } = useParams<{ symbol: string }>();
+  const symbol = symbolProp ?? routeSymbol;
 
   // Price history state
   const [priceLoading, setPriceLoading] = useState<boolean>(true);

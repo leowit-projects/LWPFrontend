@@ -7,11 +7,7 @@ import {
   Tab,
   Paper,
   Typography,
-  FormControl,
-  InputLabel,
-  Select,
   MenuItem,
-  SelectChangeEvent,
   Checkbox,
   Button,
   IconButton,
@@ -23,12 +19,14 @@ import {
   TextField,
   Autocomplete,
   Chip,
+  Link,
 } from '@mui/material';
 import { Visibility, Add, MoreVert, Close } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { watchlistAPI } from '../../api/client';
 import { AssetType, WatchlistGroupFull, WatchlistFull, WatchlistItem } from '../../types';
 import { SymbolOption, useSymbolOptions, getErrorMessage } from './watchlistShared';
+import StockHistory from '../StockHistory';
 
 function TabPanel({ children, value, index }: { children: React.ReactNode; value: number; index: number }) {
   return (
@@ -100,14 +98,44 @@ function getSignal(value: number | null, criteria: SortCriteria): Signal {
 }
 
 function sortItems(items: WatchlistItem[], criteria: SortCriteria): WatchlistItem[] {
+  // Dividend yield reads best highest-first; every other metric stays ascending.
+  const descending = criteria === 'dividend_yield';
   return [...items].sort((a, b) => {
     const av = getSortValue(a, criteria);
     const bv = getSortValue(b, criteria);
     if (av == null && bv == null) return 0;
     if (av == null) return 1;
     if (bv == null) return -1;
-    return av - bv;
+    return descending ? bv - av : av - bv;
   });
+}
+
+function formatAmount(value: number, currency?: string): string {
+  // INR groups by lakhs/crores (12,34,567.89); everything else uses standard thousands grouping.
+  const locale = currency === 'INR' ? 'en-IN' : 'en-US';
+  return value.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Total invested / unrealized P&L per currency, from items that carry holding data.
+interface HoldingsSummary {
+  currency: string;
+  invested: number;
+  pnl: number;
+}
+
+function computeHoldingsSummary(items: WatchlistItem[]): HoldingsSummary[] {
+  const byCurrency = new Map<string, HoldingsSummary>();
+  for (const item of items) {
+    if (item.holding_quantities == null || item.average_price == null) continue;
+    const currency = item.currency ?? '';
+    const entry = byCurrency.get(currency) ?? { currency, invested: 0, pnl: 0 };
+    entry.invested += item.holding_quantities * item.average_price;
+    if (item.price_last_close != null) {
+      entry.pnl += item.holding_quantities * (item.price_last_close - item.average_price);
+    }
+    byCurrency.set(currency, entry);
+  }
+  return Array.from(byCurrency.values());
 }
 
 const Watchlists: React.FC = () => {
@@ -118,6 +146,9 @@ const Watchlists: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [sortBy, setSortBy] = useState<SortCriteria>('52w_position');
   const [selectedSymbols, setSelectedSymbols] = useState<Set<string>>(new Set());
+
+  // Inline history popup, opened from a symbol click instead of navigating away.
+  const [historySymbol, setHistorySymbol] = useState<string | null>(null);
 
   const symbolOptions = useSymbolOptions();
 
@@ -454,22 +485,28 @@ const Watchlists: React.FC = () => {
                 </>
               )}
 
-              <FormControl size="small" sx={{ minWidth: 160 }}>
-                <InputLabel id="watchlist-sort-label">Sort by</InputLabel>
-                <Select
-                  labelId="watchlist-sort-label"
-                  label="Sort by"
-                  value={sortBy}
-                  onChange={(e: SelectChangeEvent) => setSortBy(e.target.value as SortCriteria)}
-                >
-                  {sortOptions.map((opt) => (
-                    <MenuItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
             </Box>
+          </Box>
+
+          <Box sx={{ display: 'flex', gap: 1, mb: 1, flexShrink: 0 }}>
+            {sortOptions.map((opt) => (
+              <Button
+                key={opt.value}
+                variant={sortBy === opt.value ? 'contained' : 'outlined'}
+                size="small"
+                onClick={() => setSortBy(opt.value)}
+                sx={{
+                  fontSize: '0.75rem',
+                  textTransform: 'none',
+                  fontWeight: sortBy === opt.value ? 700 : 500,
+                  ...(sortBy === opt.value
+                    ? { bgcolor: '#1976d2', color: 'white', '&:hover': { bgcolor: '#1565c0' } }
+                    : { borderColor: '#ddd', color: 'text.secondary', '&:hover': { borderColor: '#bbb', bgcolor: '#f5f5f5' } }),
+                }}
+              >
+                {opt.label}
+              </Button>
+            ))}
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, borderBottom: 1, borderColor: 'divider' }}>
@@ -596,6 +633,38 @@ const Watchlists: React.FC = () => {
                             </Box>
                           </Box>
 
+                          {computeHoldingsSummary(watchlist.items).map((summary) => (
+                            <Box
+                              key={summary.currency}
+                              sx={{
+                                flexShrink: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: 1,
+                                px: 1,
+                                py: 0.4,
+                                bgcolor: 'action.hover',
+                                borderBottom: 1,
+                                borderColor: 'divider',
+                              }}
+                            >
+                              <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.primary' }}>
+                                {summary.currency && `${summary.currency} `}Invested: {formatAmount(summary.invested, summary.currency)}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  fontSize: '0.65rem',
+                                  color: summary.pnl >= 0 ? 'success.main' : 'error.main',
+                                }}
+                              >
+                                P&L: {summary.pnl >= 0 ? '▲' : '▼'}
+                                {formatAmount(Math.abs(summary.pnl), summary.currency)}
+                              </Typography>
+                            </Box>
+                          ))}
+
                           {addItemsWatchlistId === watchlist.id && (
                             <Box sx={{ p: 0.5, borderBottom: 1, borderColor: 'divider' }}>
                               <Autocomplete
@@ -647,7 +716,6 @@ const Watchlists: React.FC = () => {
                                   <Paper
                                     key={item.id}
                                     variant="outlined"
-                                    onClick={() => toggleSymbol(item.symbol)}
                                     draggable
                                     onDragStart={(e) => {
                                       e.stopPropagation();
@@ -708,7 +776,7 @@ const Watchlists: React.FC = () => {
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, flex: '1 1 0', minWidth: 0 }}>
                                       <Checkbox
                                         checked={isSelected}
-                                        onChange={() => {}}
+                                        onChange={() => toggleSymbol(item.symbol)}
                                         size="small"
                                         sx={{
                                           p: 0.25,
@@ -717,7 +785,18 @@ const Watchlists: React.FC = () => {
                                       />
                                       <Box sx={{ minWidth: 0 }}>
                                         <Typography variant="caption" fontWeight={700} noWrap sx={{ display: 'block' }}>
-                                          {item.symbol}
+                                          <Link
+                                            component="button"
+                                            type="button"
+                                            underline="hover"
+                                            color="inherit"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setHistorySymbol(item.symbol);
+                                            }}
+                                          >
+                                            {item.symbol}
+                                          </Link>
                                         </Typography>
                                         <Typography
                                           variant="caption"
@@ -897,6 +976,22 @@ const Watchlists: React.FC = () => {
             {creatingWatchlist ? <CircularProgress size={18} /> : 'Add'}
           </Button>
         </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(historySymbol)}
+        onClose={() => setHistorySymbol(null)}
+        slotProps={{ paper: { sx: { width: 1280, height: 720, maxWidth: 'none' } } }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1 }}>
+          {historySymbol}
+          <IconButton size="small" onClick={() => setHistorySymbol(null)}>
+            <Close fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0, overflowY: 'auto' }}>
+          {historySymbol && <StockHistory symbolProp={historySymbol} />}
+        </DialogContent>
       </Dialog>
     </Box>
   );
