@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Box, Container, Typography, Paper, FormControl, InputLabel, Select, MenuItem, SelectChangeEvent, Alert } from '@mui/material';
+import { Box, Container, Typography, Paper, Chip, Button, Alert } from '@mui/material';
 import { DataGrid, GridColDef, GridColumnGroupingModel, GridRenderCellParams } from '@mui/x-data-grid';
 import { ShowChart, InfoOutlined } from '@mui/icons-material';
 import Tooltip from '@mui/material/Tooltip';
@@ -84,6 +84,17 @@ const columns: GridColDef[] = [
   { field: 'roe', headerName: 'ROE', minWidth: 100, align: 'right', headerAlign: 'right', renderHeader: renderRatioHeader('ROE', 'roe'), renderCell: renderNumber(2, '%') },
   { field: 'debt_to_equity', headerName: 'Debt/Equity', minWidth: 130, align: 'right', headerAlign: 'right', renderHeader: renderRatioHeader('Debt/Equity', 'debt_to_equity'), renderCell: renderNumber(2) },
   { field: 'operating_margin', headerName: 'Op. Margin', minWidth: 120, align: 'right', headerAlign: 'right', renderHeader: renderRatioHeader('Op. Margin', 'operating_margin'), renderCell: renderNumber(2, '%') },
+
+  // Duplicate of the leading Symbol column, so it stays visible after scrolling right
+  {
+    field: 'symbol_end',
+    headerName: 'Symbol',
+    minWidth: 110,
+    valueGetter: (_value, row: StockSymbol) => row.symbol,
+    renderCell: (params: GridRenderCellParams<StockSymbol>) => (
+      <Typography variant="body2" fontWeight={600}>{params.row.symbol}</Typography>
+    ),
+  },
 ];
 
 const columnGroupingModel: GridColumnGroupingModel = [
@@ -117,7 +128,7 @@ const SectorAnalysis: React.FC = () => {
   const [stocks, setStocks] = useState<StockSymbol[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSector, setSelectedSector] = useState<string>('');
+  const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -141,13 +152,25 @@ const SectorAnalysis: React.FC = () => {
   );
 
   useEffect(() => {
-    if (!selectedSector && sectors.length > 0) setSelectedSector(sectors[0]);
-  }, [sectors, selectedSector]);
+    if (selectedSectors.length === 0 && sectors.length > 0) setSelectedSectors([sectors[0]]);
+  }, [sectors, selectedSectors]);
+
+  const toggleSector = (sector: string) => {
+    setSelectedSectors((prev) =>
+      prev.includes(sector) ? prev.filter((s) => s !== sector) : [...prev, sector]
+    );
+  };
 
   const filteredStocks = useMemo(
-    () => stocks.filter((s) => s.sector_industry?.split(' - ')[0] === selectedSector),
-    [stocks, selectedSector]
+    () => stocks.filter((s) => {
+      const sector = s.sector_industry?.split(' - ')[0];
+      return !!sector && selectedSectors.includes(sector);
+    }),
+    [stocks, selectedSectors]
   );
+
+  const indiaStocks = useMemo(() => filteredStocks.filter((s) => s.currency === 'INR'), [filteredStocks]);
+  const usStocks = useMemo(() => filteredStocks.filter((s) => s.currency === 'USD'), [filteredStocks]);
 
   return (
     <Container maxWidth="xl" sx={{ mt: 1, mb: 3 }}>
@@ -174,33 +197,67 @@ const SectorAnalysis: React.FC = () => {
       </Box>
 
       <Paper variant="outlined" sx={{ p: 2, mb: 2, borderRadius: 2 }}>
-        <FormControl sx={{ minWidth: 300 }} size="small">
-          <InputLabel>Sector</InputLabel>
-          <Select
-            value={selectedSector}
-            label="Sector"
-            onChange={(e: SelectChangeEvent<string>) => setSelectedSector(e.target.value)}
-          >
-            {sectors.map((s) => (
-              <MenuItem key={s} value={s}>{s}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          {sectors.map((sector) => {
+            const isSelected = selectedSectors.includes(sector);
+            return (
+              <Button
+                key={sector}
+                variant={isSelected ? 'contained' : 'outlined'}
+                size="small"
+                onClick={() => toggleSector(sector)}
+                sx={{
+                  fontSize: '0.75rem',
+                  textTransform: 'none',
+                  fontWeight: isSelected ? 700 : 500,
+                  ...(isSelected
+                    ? { bgcolor: '#1976d2', color: 'white', '&:hover': { bgcolor: '#1565c0' } }
+                    : { borderColor: '#ddd', color: 'text.secondary', '&:hover': { borderColor: '#bbb', bgcolor: '#f5f5f5' } }),
+                }}
+              >
+                {sector}
+              </Button>
+            );
+          })}
+        </Box>
       </Paper>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      <Paper variant="outlined" sx={{ borderRadius: 2 }}>
-        <DataGrid
-          rows={filteredStocks}
-          getRowId={(row) => row.symbol}
-          columns={columns}
-          columnGroupingModel={columnGroupingModel}
-          loading={loading}
-          autoHeight
-          disableRowSelectionOnClick
-          sx={{ '& .MuiDataGrid-cell:focus': { outline: 'none' } }}
-        />
+      <Paper variant="outlined" sx={{ p: 2, mb: 2, borderRadius: 2 }}>
+        <Box display="flex" alignItems="center" gap={1} mb={1}>
+          <Typography variant="subtitle1" fontWeight={700}>🇮🇳 India Stocks</Typography>
+          <Chip label={`${indiaStocks.length} stocks`} size="small" color="primary" variant="outlined" />
+        </Box>
+        <Box sx={{ height: 500, width: '100%' }}>
+          <DataGrid
+            rows={indiaStocks}
+            getRowId={(row) => row.symbol}
+            columns={columns}
+            columnGroupingModel={columnGroupingModel}
+            loading={loading}
+            disableRowSelectionOnClick
+            sx={{ '& .MuiDataGrid-cell:focus': { outline: 'none' } }}
+          />
+        </Box>
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+        <Box display="flex" alignItems="center" gap={1} mb={1}>
+          <Typography variant="subtitle1" fontWeight={700}>🇺🇸 US Stocks</Typography>
+          <Chip label={`${usStocks.length} stocks`} size="small" color="secondary" variant="outlined" />
+        </Box>
+        <Box sx={{ height: 500, width: '100%' }}>
+          <DataGrid
+            rows={usStocks}
+            getRowId={(row) => row.symbol}
+            columns={columns}
+            columnGroupingModel={columnGroupingModel}
+            loading={loading}
+            disableRowSelectionOnClick
+            sx={{ '& .MuiDataGrid-cell:focus': { outline: 'none' } }}
+          />
+        </Box>
       </Paper>
     </Container>
   );
