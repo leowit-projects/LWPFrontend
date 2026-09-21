@@ -46,9 +46,10 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { holdingAccountsAPI } from '../../api/client';
+import { holdingAccountsAPI, promotersAPI } from '../../api/client';
 import {
   HoldingAccountsResponse,
+  Promoter,
   } from '../../types';
 import { PIE_NAMED_SECTORS, 
   formatCurrency, 
@@ -63,6 +64,7 @@ import ListHoldingPinned from '../../components/ListHoldingPinned';
 import ListHoldingStocks from '../../components/ListHoldingStocks';
 import ListHoldingETFs from '../../components/ListHoldingETFs';
 import ListHoldingMFBonds from '../../components/ListHoldingMFBonds';
+import ListHoldingPromoters from '../../components/ListHoldingPromoters';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 // (All original sub-components preserved below unchanged)
@@ -265,8 +267,19 @@ const ListHoldings: React.FC = () => {
   const [success, setSuccess] = useState<string>('');
   const [holdings, setHoldings] = useState<HoldingAccountsResponse | null>(null);
   const [tabValue, setTabValue] = useState(0);
+  const [promoters, setPromoters] = useState<Promoter[]>([]);
 
   useEffect(() => { if (accountId) loadHoldings(); }, [accountId]);
+  useEffect(() => { loadPromoters(); }, []);
+
+  const loadPromoters = async (): Promise<void> => {
+    try {
+      const response = await promotersAPI.getAll();
+      setPromoters(response.data);
+    } catch (err) {
+      console.error('Failed to load promoters:', err);
+    }
+  };
 
   const loadHoldings = async (): Promise<void> => {
     setLoading(true);
@@ -579,6 +592,9 @@ const ListHoldings: React.FC = () => {
       <TabPanel value={tabValue} index={3}>
         <ListHoldingAIInsights holdings={holdings} accountId={accountId!} />
       </TabPanel>
+
+      {/* ── Holdings by Promoter ── */}
+      <ListHoldingPromoters stocks={stocks} promoters={promoters} currency={holdings.currency} />
     </Container>
   );
 };
