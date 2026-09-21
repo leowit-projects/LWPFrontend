@@ -33,6 +33,7 @@ import Bonds from './pages/Admin/Bonds';
 import MutualFunds from './pages/Admin/MutualFunds';
 import Industries from './pages/Admin/Industries';
 import Tags from './pages/Admin/tags';
+import Promoters from './pages/Admin/Promoters';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -297,6 +298,16 @@ const App: React.FC = () => {
                   <AdminRoute>
                     <Layout>
                       <Tags />
+                    </Layout>
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/promoters"
+                element={
+                  <AdminRoute>
+                    <Layout>
+                      <Promoters />
                     </Layout>
                   </AdminRoute>
                 }

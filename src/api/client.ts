@@ -26,6 +26,12 @@ import {
     Industry,
     IndustryCreate,
     IndustryUpdate,
+    Promoter,
+    PromoterCreate,
+    PromoterUpdate,
+    PromoterHolding,
+    PromoterHoldingCreate,
+    PromoterHoldingUpdate,
     Strategy,
     StrategyCreate,
     StrategyUpdate,
@@ -158,9 +164,6 @@ export const stockAPI = {
     updatePurchaseQuantity: (symbol: string, purchase_quantity: number): Promise<AxiosResponse<StockSymbol>> =>
         api.patch<StockSymbol>(`/api/stocks/${symbol}/purchase-quantity`, { purchase_quantity }),
 
-    updatePromoters: (symbol: string, promoter_names: string[]): Promise<AxiosResponse<StockSymbol>> =>
-        api.patch<StockSymbol>(`/api/stocks/${symbol}/promoters`, { promoter_names }),
-
     setTags: (symbol: string, tagIds: number[]): Promise<AxiosResponse<StockSymbol>> =>
         api.put<StockSymbol>(`/api/stocks/${symbol}/tags`, { tag_ids: tagIds }),
 
@@ -271,6 +274,33 @@ export const industriesAPI = {
 
     delete: (id: number): Promise<AxiosResponse<void>> =>
         api.delete(`/api/industries/${id}`),
+};
+
+// Promoters API
+export const promotersAPI = {
+    getAll: (): Promise<AxiosResponse<Promoter[]>> =>
+        api.get<Promoter[]>('/api/promoters'),
+
+    getById: (id: number): Promise<AxiosResponse<Promoter>> =>
+        api.get<Promoter>(`/api/promoters/${id}`),
+
+    create: (data: PromoterCreate): Promise<AxiosResponse<Promoter>> =>
+        api.post<Promoter>('/api/promoters', data),
+
+    update: (id: number, data: PromoterUpdate): Promise<AxiosResponse<Promoter>> =>
+        api.put<Promoter>(`/api/promoters/${id}`, data),
+
+    delete: (id: number): Promise<AxiosResponse<void>> =>
+        api.delete(`/api/promoters/${id}`),
+
+    addHolding: (promoterId: number, data: PromoterHoldingCreate): Promise<AxiosResponse<PromoterHolding>> =>
+        api.post<PromoterHolding>(`/api/promoters/${promoterId}/holdings`, data),
+
+    updateHolding: (promoterId: number, holdingId: number, data: PromoterHoldingUpdate): Promise<AxiosResponse<PromoterHolding>> =>
+        api.put<PromoterHolding>(`/api/promoters/${promoterId}/holdings/${holdingId}`, data),
+
+    deleteHolding: (promoterId: number, holdingId: number): Promise<AxiosResponse<void>> =>
+        api.delete(`/api/promoters/${promoterId}/holdings/${holdingId}`),
 };
 
 // Audit Logs API

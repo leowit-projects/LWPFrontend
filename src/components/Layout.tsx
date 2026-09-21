@@ -40,6 +40,7 @@ import {
   ChevronRight,
   ShowChart,
   Visibility,
+  Groups,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import MyLogo from '../assets/lion.png';
@@ -118,6 +119,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { text: 'Allowed Emails', icon: <Email />, path: '/admin/allowed-emails' },
     { text: 'Industries', icon: <Category />, path: '/admin/industries' },
     { text: 'Tags', icon: <Label />, path: '/admin/tags' },
+    { text: 'Promoters', icon: <Groups />, path: '/admin/promoters' },
     { text: 'Stocks', icon: <TrendingUp />, path: '/admin/stocks' },
     { text: 'ETFs', icon: <PieChart />, path: '/admin/etfs' },
     { text: 'Bonds', icon: <AccountBalance />, path: '/admin/bonds' },

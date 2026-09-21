@@ -65,6 +65,15 @@ const getProgressColor = (percentage: number): 'error' | 'warning' | 'success' =
   return 'error';
 };
 
+// Promoter integrity score (1-10) -> red/yellow/green gradient
+const getIntegrityColor = (score: number | null | undefined): string => {
+  console.log(score);
+  if (score == null) return '#9e9e9e';
+  const clamped = Math.max(1, Math.min(10, score));
+  const hue = ((clamped - 1) / 9) * 120; // 1 -> red(0), 5 -> yellow(60), 10 -> green(120)
+  return `hsl(${hue}, 70%, 40%)`;
+};
+
 // Get moving average signal
 const getMASignal = (
   closePrice: number | null | undefined,
@@ -171,6 +180,8 @@ const ListStocks: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [industries, setIndustries] = useState<string[]>([]);
+  const [selectedPromoters, setSelectedPromoters] = useState<string[]>([]);
+  const [promoterNames, setPromoterNames] = useState<string[]>([]);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [selectedStocks, setSelectedStocks] = useState<string[]>([]); // New state for selected stock symbols
   const [sectorButtonFilter, setSectorButtonFilter] = useState<string>('All');
@@ -198,6 +209,17 @@ const ListStocks: React.FC = () => {
   }, [stocks]);
 
   useEffect(() => {
+    // Extract unique promoter names from stocks
+    const uniquePromoters = Array.from(
+      new Set(
+        stocks
+          .flatMap((stock) => stock.promoters?.map((p) => p.promoter_name) ?? [])
+      )
+    ).sort();
+    setPromoterNames(uniquePromoters);
+  }, [stocks]);
+
+  useEffect(() => {
     let result = stocks;
 
     // First apply sector button filter
@@ -222,6 +244,13 @@ const ListStocks: React.FC = () => {
       );
     }
 
+    // Then apply promoter dropdown filter
+    if (selectedPromoters.length > 0) {
+      result = result.filter((stock) =>
+        stock.promoters?.some((p) => selectedPromoters.includes(p.promoter_name))
+      );
+    }
+
     // Search by name or symbol
     if (searchQuery.trim()) {
       const query = searchQuery.trim().toLowerCase();
@@ -232,7 +261,7 @@ const ListStocks: React.FC = () => {
     }
 
     setFilteredStocks(result);
-  }, [selectedIndustries, stocks, sectorButtonFilter, searchQuery]);
+  }, [selectedIndustries, selectedPromoters, stocks, sectorButtonFilter, searchQuery]);
 
   const loadStocks = async (): Promise<void> => {
     setLoading(true);
@@ -256,6 +285,16 @@ const ListStocks: React.FC = () => {
       setSelectedIndustries([]);
     } else {
       setSelectedIndustries(value);
+    }
+  };
+
+  const handlePromoterChange = (event: any) => {
+    const value = event.target.value;
+    // Handle "all" selection
+    if (value.includes('all')) {
+      setSelectedPromoters([]);
+    } else {
+      setSelectedPromoters(value);
     }
   };
 
@@ -833,14 +872,59 @@ const ListStocks: React.FC = () => {
     {
       field: 'sector_industry',
       headerName: 'Industry',
-      width: 200,
+      width: 350,
       align: 'left',
       headerAlign: 'center',
       renderCell: (params: GridRenderCellParams) => (
         <Typography variant="body2" color="text.secondary">
           {params.value || '-'}
         </Typography>
-      ),  
+      ),
+    },
+    {
+      field: 'promoters',
+      headerName: 'Promoters',
+      width: 240,
+      sortable: false,
+      renderCell: (params: GridRenderCellParams) => {
+        const promoters: NonNullable<StockSymbol['promoters']> = params.value ?? [];
+        if (promoters.length === 0) {
+          return <Typography variant="body2" color="text.disabled">-</Typography>;
+        }
+        const visible = promoters.slice(0, 2);
+        const overflow = promoters.length - visible.length;
+        return (
+          <Tooltip
+            title={
+              <Box>
+                {promoters.map((p) => (
+                  <Typography key={p.promoter_id} variant="caption" display="block">
+                    {p.promoter_name} | {p.holding_percent.toFixed(2)}%
+                    {p.integrity_score != null ? ` (integrity ${p.integrity_score.toFixed(1)})` : ''}
+                  </Typography>
+                ))}
+              </Box>
+            }
+          >
+            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'nowrap', overflow: 'hidden' }}>
+              {visible.map((p) => (
+                <Chip
+                  key={p.promoter_id}
+                  label={`${p.promoter_name} | ${p.holding_percent.toFixed(2)}%`}
+                  size="small"
+                  sx={{
+                    bgcolor: getIntegrityColor(p.integrity_score),
+                    color: '#fff',
+                    fontWeight: 600,
+                    maxWidth: 150,
+                  }}
+                />
+              ))}
+              {overflow > 0 && <Chip label={`+${overflow}`} size="small" variant="outlined" />}
+            </Box>
+          </Tooltip>
+        );
+      },
     },
   ];
 
@@ -961,7 +1045,37 @@ const ListStocks: React.FC = () => {
               ))}
             </Select>
           </FormControl>
-          
+
+          <FormControl sx={{ minWidth: 300 }}>
+            <InputLabel>Filter by Promoter</InputLabel>
+            <Select
+              multiple
+              value={selectedPromoters}
+              label="Filter by Promoter"
+              onChange={handlePromoterChange}
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {selected.length === 0 ? (
+                    <em>All Promoters</em>
+                  ) : (
+                    `${selected.length} selected`
+                  )}
+                </Box>
+              )}
+            >
+              <MenuItem value="all">
+                <Checkbox checked={selectedPromoters.length === 0} />
+                <ListItemText primary={<em>All Promoters</em>} />
+              </MenuItem>
+              {promoterNames.map((promoterName) => (
+                <MenuItem key={promoterName} value={promoterName}>
+                  <Checkbox checked={selectedPromoters.includes(promoterName)} />
+                  <ListItemText primary={promoterName} />
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
           {/* Display individual chips for each selected industry */}
           {selectedIndustries.map((industry) => (
             <Chip
@@ -980,6 +1094,28 @@ const ListStocks: React.FC = () => {
               label="Clear all"
               onDelete={() => setSelectedIndustries([])}
               onClick={() => setSelectedIndustries([])}
+              color="secondary"
+            />
+          )}
+
+          {/* Display individual chips for each selected promoter */}
+          {selectedPromoters.map((promoterName) => (
+            <Chip
+              key={promoterName}
+              label={promoterName}
+              onDelete={() => {
+                setSelectedPromoters(selectedPromoters.filter((p) => p !== promoterName));
+              }}
+              color="primary"
+            />
+          ))}
+
+          {/* Clear all button when multiple promoters selected */}
+          {selectedPromoters.length > 1 && (
+            <Chip
+              label="Clear all"
+              onDelete={() => setSelectedPromoters([])}
+              onClick={() => setSelectedPromoters([])}
               color="secondary"
             />
           )}

@@ -72,12 +72,12 @@ export interface AllowedEmailCreate {
 export interface StockSymbol {
     symbol: string;
     name?: string;
-    promoter_names?: string[] | null;
     currency: CurrencyCode;
     exchange?: string;
     asset_type: AssetType;
     sector_industry?: string;
     tags?: { id: number; name: string }[];
+    promoters?: { promoter_id: number; promoter_name: string; holding_percent: number; integrity_score?: number | null }[];
     is_active: boolean;
     is_purchase_eligible: boolean;
     purchase_quantity?: number;
@@ -350,6 +350,43 @@ export interface IndustryUpdate {
     industry?: string;
 }
 
+export interface PromoterHolding {
+    id: number;
+    promoter_id: number;
+    stock_symbol: string;
+    holding_percent: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface Promoter {
+    id: number;
+    name: string;
+    integrity_score?: number | null;
+    created_at: string;
+    updated_at: string;
+    holdings: PromoterHolding[];
+}
+
+export interface PromoterCreate {
+    name: string;
+    integrity_score?: number | null;
+}
+
+export interface PromoterUpdate {
+    name?: string;
+    integrity_score?: number | null;
+}
+
+export interface PromoterHoldingCreate {
+    stock_symbol: string;
+    holding_percent: number;
+}
+
+export interface PromoterHoldingUpdate {
+    holding_percent: number;
+}
+
 // Strategy types
 export interface FormulaCriteria {
     criteria_name: string;
@@ -460,12 +497,18 @@ export interface FiiShareholdingPoint {
     percent: number;
 }
 
+export interface StockPromoterHolding {
+    name: string;
+    holding_percent: number;
+}
+
 export interface StockHoldingDetail extends HoldingDetail {
     symbol: string;
     name?: string;
     exchange?: string;
     tags?: string[];
     fii_shareholdings?: FiiShareholdingPoint[];
+    promoters?: StockPromoterHolding[];
 }
 
 export interface ETFHoldingDetail extends HoldingDetail {
