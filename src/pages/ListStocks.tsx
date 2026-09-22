@@ -67,7 +67,6 @@ const getProgressColor = (percentage: number): 'error' | 'warning' | 'success' =
 
 // Promoter integrity score (1-10) -> red/yellow/green gradient
 const getIntegrityColor = (score: number | null | undefined): string => {
-  console.log(score);
   if (score == null) return '#9e9e9e';
   const clamped = Math.max(1, Math.min(10, score));
   const hue = ((clamped - 1) / 9) * 120; // 1 -> red(0), 5 -> yellow(60), 10 -> green(120)
