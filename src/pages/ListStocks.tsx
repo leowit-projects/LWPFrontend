@@ -22,6 +22,7 @@ import { TrendingUp, Search } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { stockAPI } from '../api/client';
 import { StockSymbol } from '../types';
+import StockValueBadge from '../components/StockValueBadge';
 // import { getSectorEmoji } from '../utils/sectorEmojis';
 
 // Helper function to calculate days difference
@@ -751,6 +752,20 @@ const ListStocks: React.FC = () => {
     //     </Typography>
     //   ),
     // },
+    {
+      field: 'stock_value',
+      headerName: 'Stock Value',
+      width: 120,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams) => (
+        <StockValueBadge
+          value={params.value}
+          band={params.row.stock_value_band}
+          breakdown={params.row.stock_value_breakdown}
+        />
+      ),
+    },
     {
       field: 'pe_ratio',
       headerName: 'P/E',

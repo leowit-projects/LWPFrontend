@@ -27,6 +27,7 @@ import {
   HoldingRecommendation,
   } from '../types';
 import { NAMED_SECTORS, formatCurrency, formatPrice } from './HoldingsShared';
+import StockValueBadge from './StockValueBadge';
 
 type RecTabType = 'BUY' | 'SELL' | 'HOLD';
 
@@ -200,6 +201,17 @@ export default function ListHoldingRecommendations({ recommendations, underSecto
       renderCell: (p: GridRenderCellParams) => (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
           <Typography variant="body2" fontWeight={700} color="primary">{formatCurrency(p.value as number, currency)}</Typography>
+        </Box>
+      ),
+    },
+    {
+      field: 'stock_value',
+      headerName: 'Stock Value',
+      width: 120,
+      type: 'number',
+      renderCell: (p: GridRenderCellParams<HoldingRecommendation>) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <StockValueBadge value={p.row.stock_value} band={p.row.stock_value_band} breakdown={p.row.stock_value_breakdown} />
         </Box>
       ),
     },

@@ -27,6 +27,7 @@ import {
   ShareholdingPatternResponse,
   ShareholdingType,
 } from '../types';
+import StockValueBadge from '../components/StockValueBadge';
 
 // ── Shareholding colours (consistent with Scheduler card chips) ───────────────
 const SHAREHOLDING_COLORS: Record<ShareholdingType, string> = {
@@ -575,6 +576,16 @@ const StockHistory: React.FC<StockHistoryProps> = ({ symbolProp }) => {
                 <Typography variant="h6" fontWeight={700}>
                   {pe != null ? pe.toFixed(2) : '--'}
                 </Typography>
+              </Box>
+              <Divider orientation="vertical" flexItem />
+              <Box sx={{ px: 2.5, py: 0.5 }}>
+                <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>Stock Value</Typography>
+                <StockValueBadge
+                  value={stockDetails?.stock_value}
+                  band={stockDetails?.stock_value_band}
+                  breakdown={stockDetails?.stock_value_breakdown}
+                  showLabel
+                />
               </Box>
             </Box>
           </Paper>

@@ -31,6 +31,8 @@ import {
   Delete,
   } from '@mui/icons-material';
 import { holdingAccountsAPI } from '../api/client';
+import { StockValueBand, StockValueBreakdown } from '../types';
+import StockValueBadge from './StockValueBadge';
 import { calculate52WeekPosition, 
     getProgressColor, 
     getAvgPriceBuySignal, 
@@ -79,6 +81,8 @@ export default function ListHoldingStocks({ stocks, currency, onDelete, accountI
     invested_value: number; current_value: number; profit_loss: number;
     profit_loss_percentage: number; currency: string; updated_at: string;
     pe_ratio?: number | null; rsi_index?: number | null;
+    stock_value?: number | null; stock_value_band?: StockValueBand | null;
+    stock_value_breakdown?: StockValueBreakdown | null;
     pin_to_sell?: boolean;   // ← new
     sell_alerts?: string[];  // ← new
     tags?: string[];
@@ -89,7 +93,7 @@ export default function ListHoldingStocks({ stocks, currency, onDelete, accountI
   accountId: string;      // ← new
   onRefresh: () => void;  // ← new
 }) {
-  type SortKey = 'symbol' | 'invested_value' | 'current_value' | 'profit_loss' | 'profit_loss_percentage' | 'quantity' | 'average_price' | '52w_position' | 'pe_ratio' | 'fii_change';
+  type SortKey = 'symbol' | 'invested_value' | 'current_value' | 'profit_loss' | 'profit_loss_percentage' | 'quantity' | 'average_price' | '52w_position' | 'pe_ratio' | 'stock_value' | 'fii_change';
   const [sortBy, setSortBy] = useState<SortKey>('52w_position');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [sectorFilter, setSectorFilter] = useState<string>('All');
@@ -152,6 +156,12 @@ export default function ListHoldingStocks({ stocks, currency, onDelete, accountI
       const fa = getFiiTrend(a.fii_shareholdings)?.change ?? Number.NEGATIVE_INFINITY;
       const fb = getFiiTrend(b.fii_shareholdings)?.change ?? Number.NEGATIVE_INFINITY;
       return sortDir === 'asc' ? fa - fb : fb - fa;
+    }
+    if (sortBy === 'stock_value') {
+      // Unscored stocks sort last in either direction
+      const svA = a.stock_value ?? (sortDir === 'asc' ? Infinity : -Infinity);
+      const svB = b.stock_value ?? (sortDir === 'asc' ? Infinity : -Infinity);
+      return sortDir === 'asc' ? svA - svB : svB - svA;
     }
     if (sortBy === 'pe_ratio') {
       const peA = a.pe_ratio ?? 0;
@@ -263,6 +273,7 @@ export default function ListHoldingStocks({ stocks, currency, onDelete, accountI
               <TableCell sx={stickyHeaderStyle}>{sortHeader('symbol', 'Symbol')}</TableCell>
               <TableCell><Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase">Sector</Typography></TableCell>
               <TableCell align="center">{sortHeader('52w_position', 'Last Close / 52W Range')}</TableCell>
+              <TableCell align="center">{sortHeader('stock_value', 'Stock Value')}</TableCell>
               <TableCell align="center">{sortHeader('pe_ratio', 'P/E')}</TableCell>
               <TableCell align="right">{sortHeader('quantity', 'Qty')}</TableCell>
               <TableCell align="right">{sortHeader('average_price', 'Avg. Price')}</TableCell>
@@ -360,6 +371,7 @@ export default function ListHoldingStocks({ stocks, currency, onDelete, accountI
                     <Typography variant="caption" color="text.secondary">No data</Typography>
                   )}
                 </TableCell>
+                <TableCell align="center"><StockValueBadge value={s.stock_value} band={s.stock_value_band} breakdown={s.stock_value_breakdown} /></TableCell>
                 <TableCell align="right"><Typography variant="body2">{s.pe_ratio}</Typography></TableCell>
                 <TableCell align="right"><Typography variant="body2">{s.quantity.toLocaleString()}</Typography></TableCell>
                 <TableCell align="right">

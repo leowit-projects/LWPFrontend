@@ -240,7 +240,7 @@ const Scheduler: React.FC = () => {
                 </Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" mb={2}>
-                Calculates BUY/SELL recommendations for all active stocks and ETFs based on configured strategies.
+                Regenerates BUY/SELL recommendations for stocks in all active holding accounts (price, trend, RSI and stock value). General stock recommendations are calculated live and need no trigger.
               </Typography>
               <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
                 <Chip label="Buy Signals" size="small" color="success" variant="outlined" />

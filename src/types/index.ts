@@ -99,10 +99,37 @@ export interface StockSymbol {
     roe?: number;
     debt_to_equity?: number;
     operating_margin?: number;
+    stock_value?: number | null;
+    stock_value_band?: StockValueBand | null;
+    stock_value_breakdown?: StockValueBreakdown | null;
     price_ma_20d?: number;
     price_ma_200d?: number;
     recommendation?: string;  // BUY, SELL, or HOLD
     created_at: string;
+}
+
+// Sector-aware valuation score from the backend (1.0 = fair price)
+export type StockValueBand = 'UNDERVALUED' | 'FAIR' | 'SLIGHTLY_HIGH' | 'OVERVALUED';
+
+export interface StockValueComponent {
+    current: number;
+    fair: number;
+    ratio: number;
+    anchors: {
+        sector_peer_median?: number;
+        sector_benchmark?: number;
+        own_5y_median?: number;
+        justified_pb?: number;
+    };
+}
+
+export interface StockValueBreakdown {
+    sector: string | null;
+    weights: { pe: number; pb: number };
+    pe: StockValueComponent | null;
+    pb: StockValueComponent | null;
+    partial: boolean;
+    notes: string[];
 }
 
 export interface StockSymbolCreate {
@@ -664,6 +691,9 @@ export interface HoldingRecommendation {
     pe_ratio?: number | null;
     pegy_index?: number | null;
     rsi_index?: number | null;
+    stock_value?: number | null;
+    stock_value_band?: StockValueBand | null;
+    stock_value_breakdown?: StockValueBreakdown | null;
     recommendation_date: string;
     is_active: boolean;
     notes?: string | null;
