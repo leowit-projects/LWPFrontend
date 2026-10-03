@@ -426,6 +426,20 @@ const ListStocks: React.FC = () => {
       },
     },
     {
+      field: 'stock_value',
+      headerName: 'Stock Value',
+      width: 120,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams) => (
+        <StockValueBadge
+          value={params.value}
+          band={params.row.stock_value_band}
+          breakdown={params.row.stock_value_breakdown}
+        />
+      ),
+    },
+    {
       field: 'tags',
       headerName: 'Tags',
       width: 180,
@@ -752,20 +766,6 @@ const ListStocks: React.FC = () => {
     //     </Typography>
     //   ),
     // },
-    {
-      field: 'stock_value',
-      headerName: 'Stock Value',
-      width: 120,
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params: GridRenderCellParams) => (
-        <StockValueBadge
-          value={params.value}
-          band={params.row.stock_value_band}
-          breakdown={params.row.stock_value_breakdown}
-        />
-      ),
-    },
     {
       field: 'pe_ratio',
       headerName: 'P/E',

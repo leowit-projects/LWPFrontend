@@ -32,6 +32,8 @@ import {
     PromoterHolding,
     PromoterHoldingCreate,
     PromoterHoldingUpdate,
+    IndustryValuationGuideline,
+    IndustryValuationGuidelineUpdate,
     Strategy,
     StrategyCreate,
     StrategyUpdate,
@@ -274,6 +276,15 @@ export const industriesAPI = {
 
     delete: (id: number): Promise<AxiosResponse<void>> =>
         api.delete(`/api/industries/${id}`),
+};
+
+// Industry Valuation Guidelines API (rows are created with their industry — list/edit only)
+export const industryValuationGuidelinesAPI = {
+    getAll: (): Promise<AxiosResponse<IndustryValuationGuideline[]>> =>
+        api.get<IndustryValuationGuideline[]>('/api/industry-valuation-guidelines'),
+
+    update: (id: number, data: IndustryValuationGuidelineUpdate): Promise<AxiosResponse<IndustryValuationGuideline>> =>
+        api.put<IndustryValuationGuideline>(`/api/industry-valuation-guidelines/${id}`, data),
 };
 
 // Promoters API

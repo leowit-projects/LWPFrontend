@@ -61,6 +61,7 @@ export default function StockValueBadge({
         <>
           <Typography variant="caption" display="block" sx={{ mt: 1 }}>
             Sector: {breakdown.sector ?? 'Unclassified'}
+            {breakdown.industry ? ` · ${breakdown.industry}` : ''}
           </Typography>
           <ComponentLines name="P/E" weight={breakdown.weights.pe} c={breakdown.pe} />
           <ComponentLines name="P/B" weight={breakdown.weights.pb} c={breakdown.pb} />

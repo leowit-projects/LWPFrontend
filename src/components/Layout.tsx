@@ -41,6 +41,7 @@ import {
   ShowChart,
   Visibility,
   Groups,
+  Tune,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import MyLogo from '../assets/lion.png';
@@ -118,6 +119,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const adminMenuItems = [
     { text: 'Allowed Emails', icon: <Email />, path: '/admin/allowed-emails' },
     { text: 'Industries', icon: <Category />, path: '/admin/industries' },
+    { text: 'Valuation Guidelines', icon: <Tune />, path: '/admin/valuation-guidelines' },
     { text: 'Tags', icon: <Label />, path: '/admin/tags' },
     { text: 'Promoters', icon: <Groups />, path: '/admin/promoters' },
     { text: 'Stocks', icon: <TrendingUp />, path: '/admin/stocks' },

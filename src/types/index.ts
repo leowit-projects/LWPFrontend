@@ -125,6 +125,7 @@ export interface StockValueComponent {
 
 export interface StockValueBreakdown {
     sector: string | null;
+    industry?: string | null;
     weights: { pe: number; pb: number };
     pe: StockValueComponent | null;
     pb: StockValueComponent | null;
@@ -375,6 +376,29 @@ export interface IndustryCreate {
 export interface IndustryUpdate {
     sector?: string;
     industry?: string;
+}
+
+// Per-industry inputs for the Stock Value score. Every non-ETF industry has one.
+export interface IndustryValuationGuideline {
+    id: number;
+    industry_id: number;
+    sector: string;
+    industry_name: string;
+    pe_weight: number;          // 0–1; P/B weight = 1 − pe_weight
+    benchmark_pe: number;
+    benchmark_pb: number;
+    use_justified_pb: boolean;
+    notes?: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface IndustryValuationGuidelineUpdate {
+    pe_weight?: number;
+    benchmark_pe?: number;
+    benchmark_pb?: number;
+    use_justified_pb?: boolean;
+    notes?: string | null;
 }
 
 export interface PromoterHolding {

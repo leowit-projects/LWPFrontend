@@ -34,6 +34,7 @@ import MutualFunds from './pages/Admin/MutualFunds';
 import Industries from './pages/Admin/Industries';
 import Tags from './pages/Admin/tags';
 import Promoters from './pages/Admin/Promoters';
+import IndustryValuationGuidelines from './pages/Admin/IndustryValuationGuidelines';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -288,6 +289,16 @@ const App: React.FC = () => {
                   <AdminRoute>
                     <Layout>
                       <Industries />
+                    </Layout>
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/valuation-guidelines"
+                element={
+                  <AdminRoute>
+                    <Layout>
+                      <IndustryValuationGuidelines />
                     </Layout>
                   </AdminRoute>
                 }
