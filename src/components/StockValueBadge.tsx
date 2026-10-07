@@ -11,6 +11,8 @@ const BAND_META: Record<StockValueBand, { label: string; color: 'info' | 'succes
 };
 
 const ANCHOR_LABELS: Record<string, string> = {
+  industry_peer_median: 'Industry peer median',
+  industry_benchmark: 'Industry benchmark',
   sector_peer_median: 'Sector peer median',
   sector_benchmark: 'Sector benchmark',
   own_5y_median: 'Own 5Y median',

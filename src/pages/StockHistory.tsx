@@ -28,6 +28,7 @@ import {
   ShareholdingType,
 } from '../types';
 import StockValueBadge from '../components/StockValueBadge';
+import StockValueCalculation from '../components/StockValueCalculation';
 
 // ── Shareholding colours (consistent with Scheduler card chips) ───────────────
 const SHAREHOLDING_COLORS: Record<ShareholdingType, string> = {
@@ -591,6 +592,15 @@ const StockHistory: React.FC<StockHistoryProps> = ({ symbolProp }) => {
           </Paper>
         );
       })()}
+
+      {/* ── 2b. Stock Value Calculation ───────────────────────────────────── */}
+      {!infoLoading && stockDetails && (
+        <StockValueCalculation
+          value={stockDetails.stock_value}
+          band={stockDetails.stock_value_band}
+          breakdown={stockDetails.stock_value_breakdown}
+        />
+      )}
 
       {/* ── 3. Price Chart Controls ───────────────────────────────────────── */}
       <Paper sx={{ p: 2, mb: 3 }}>

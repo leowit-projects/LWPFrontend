@@ -116,7 +116,9 @@ export interface StockValueComponent {
     fair: number;
     ratio: number;
     anchors: {
-        sector_peer_median?: number;
+        industry_peer_median?: number;
+        industry_benchmark?: number;
+        sector_peer_median?: number;   // breakdowns computed before the switch to industry peers
         sector_benchmark?: number;
         own_5y_median?: number;
         justified_pb?: number;
@@ -126,6 +128,9 @@ export interface StockValueComponent {
 export interface StockValueBreakdown {
     sector: string | null;
     industry?: string | null;
+    // Absent on breakdowns computed before these were stored
+    industry_benchmark?: { pe: number; pb: number };
+    industry_peer_median?: { pe: number | null; pb: number | null };
     weights: { pe: number; pb: number };
     pe: StockValueComponent | null;
     pb: StockValueComponent | null;
