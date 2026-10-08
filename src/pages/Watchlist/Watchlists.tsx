@@ -39,10 +39,11 @@ function TabPanel({ children, value, index }: { children: React.ReactNode; value
 // Remaining viewport height below the fixed header (Layout's AppBar/Toolbar + main padding).
 const pageHeight = { xs: 'calc(100vh - 53px)', sm: 'calc(100vh - 59px)' };
 
-type SortCriteria = '52w_position' | 'pb_ratio' | 'pe_ratio' | 'rsi_index' | 'dividend_yield';
+type SortCriteria = '52w_position' | 'stock_value' | 'pb_ratio' | 'pe_ratio' | 'rsi_index' | 'dividend_yield';
 
 const sortOptions: { value: SortCriteria; label: string }[] = [
   { value: '52w_position', label: '52W Position' },
+  { value: 'stock_value', label: 'Stock Value' },
   { value: 'pb_ratio', label: 'P/B Ratio' },
   { value: 'pe_ratio', label: 'P/E Ratio' },
   { value: 'rsi_index', label: 'RSI Index' },
@@ -93,6 +94,14 @@ function getSignal(value: number | null, criteria: SortCriteria): Signal {
     if (value <= 30) return 'strong_buy';
     if (value >= 70) return 'strong_caution';
     return null;
+  }
+  if (criteria === 'stock_value') {
+    // Backend bands: < 0.8 undervalued · 0.8–1.2 fair · 1.2–1.5 slightly high · > 1.5 overvalued
+    if (value < 0.6) return 'strong_buy';
+    if (value < 0.8) return 'buy';
+    if (value <= 1.2) return null;
+    if (value <= 1.5) return 'caution';
+    return 'strong_caution';
   }
   return null;
 }

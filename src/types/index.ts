@@ -904,6 +904,8 @@ export interface WatchlistItem {
     pe_ratio: number | null;
     rsi_index: number | null;
     dividend_yield: number | null;
+    stock_value: number | null;          // Indian stocks only; null for ETFs and US stocks
+    stock_value_band: StockValueBand | null;
     holding_quantities: number | null;
     average_price: number | null;
     added_at: string;
